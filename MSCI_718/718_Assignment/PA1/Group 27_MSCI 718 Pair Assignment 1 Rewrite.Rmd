@@ -1,0 +1,188 @@
+---
+title: "MSCI 718 Pair Assignment 1 Rewrite"
+author: "Group 27: Anson Ma (#20916612) & Tahmid Bari (#20864394)"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(Rmisc)
+```
+
+<!-- ASSIGNMENT START -->
+
+# Pair Assignment 1 Rewrite
+
+## Learning Objectives {.build}
+
+In this assignment, you will perform exploratory data analysis and summarize a dataset.
+
+## Scenario {.build}
+
+Your friend recently got into raising chickens, and has been trying out different diets over days. They want to know if these diets have changed the chicken’s weights after 20 days. Use the built-in data set ChickWeight to do the following:
+
+1. Summarize the dataset: describe the number of observations, what variables there are, their levels of measurement/data type, and give an idea of the range of values using measures of central tendency, dispersion, and range. Use plots as appropriate.
+2. Calculate confidence intervals for mean weight at day 0 and 20 for each diet, plot the results, and interpret them.
+3. Write up a conclusion for the effect of diets on chickens after 20 days using evidence from your results.
+
+## Set Directory {.build}
+
+```{r}
+setwd("/Users/anson/Desktop/Anson/Winter 2021/MSCI 718/Pair Assignment 1 Rewrite")
+```
+```{r echo=FALSE}
+getwd()
+```
+
+## Input Data {.build}
+
+Let's look at the built-in `ChickWeight` dataset.
+
+A first way to get information might be to look at the data structure:
+
+```{r echo=FALSE}
+str(ChickWeight)
+```
+
+Or look at the data in summary:
+
+```{r echo=FALSE}
+summary(ChickWeight)
+```
+
+`ChickWeight` has  `r ncol(ChickWeight)` variables for `r nrow(ChickWeight)` observations.
+
+Description
+The ChickWeight data frame has 578 rows and 4 columns from an experiment on the effect of diet on early growth of chicks.
+
+`weight`
+a numeric vector giving the body weight of the chick (gm).
+`Time`
+a numeric vector giving the number of days since birth when the measurement was made.
+`Chick`
+an ordered factor with levels 18 < ... < 48 giving a unique identifier for the chick. The ordering of the levels groups chicks on the same diet together and orders them according to their final weight (lightest to heaviest) within diet.
+`Diet`
+a factor with levels 1, ..., 4 indicating which experimental diet the chick received.
+
+Details
+The body weights of the chicks were measured at birth and every second day thereafter until day 20. They were also measured on day 21. There were four groups on chicks on different protein diets.
+
+We’re looking here, at data about some chickens. These chickens were fed one of 4 different diets for a time period of 3 weeks. Their weights were then recorded every day. Let us glance at a summary.
+
+You can see from above that 50 different chicken were tracked over a period of 3 weeks. They were fed one of four different diets. 20 of them were fed diet 1 and 10 each were fed one of the 3 other diets.
+
+```{r echo=FALSE}
+ChickWeight %>% group_by(Diet) %>% summarize(number_of_chicken = n_distinct(Chick))
+```
+
+## Plot Data {.build}
+
+Of course, we probably want to try plotting the data as well. I'd take a quick look into a couple different variables.
+
+**Let’s look at a summary of the change in weights for each chicken over 21 days, grouped by the diet they followed.**
+
+**Boxplot of Weight Vs Time for Different Diets**
+
+```{r echo=FALSE}
+ggplot(ChickWeight, aes(x=Time, y=weight, fill=Diet)) + geom_boxplot()
+```
+
+**Scatterplot of Weight Vs Time for Different Diets**
+
+```{r}
+ggplot(ChickWeight, aes(x=Time, y=weight, color=Diet)) + geom_point()
+```
+
+**Plot of Weight Vs Time for Different Diets**
+
+```{r echo=FALSE}
+ggplot(ChickWeight) + geom_line(aes(x=Time, y=weight, colour=Diet, group=Chick))
+```
+**Boxplot of Weight Vs Time for Different Diets on Day 0**
+
+*Chick Weights on Day 0*
+
+```{r echo=FALSE}
+ChickWeight1 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '0' & ChickWeight$Chick != 'NA' & ChickWeight$Diet != 'NA'),]
+ggplot(ChickWeight1, aes(x=Diet, y=weight, fill=Diet)) + geom_boxplot()
+```
+
+**Boxplot of Weight Vs Time for Different Diets on Day 21**
+
+*Chick Weights on Day 21*
+
+```{r echo=FALSE}
+ChickWeight3 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '21' & ChickWeight$Chick != 'NA' & ChickWeight$Diet != 'NA'),]
+ggplot(ChickWeight3, aes(x=Diet, y=weight, fill=Diet)) + geom_boxplot()
+```
+
+Plotting the weights of Chicks on Day 0 shows the distribution of all chicks before they were subject to any diet. This shows a common baseline among all chicks. Clearly, the weights of the chicks ranged between 39 and 42 grams.
+
+The second plot, Chick weights on Day 21, shows the distribution of weights of chicks after they were subjected to 21 days of each diet. Assuming that other environmental conditions were maintained for all chicks aross diets, the difference in distributions between Day 0 and Day 21 plot shows the efffect of each diet on chicks. The boxplot further helps to compare the relative effect of each diet on after 20 days
+
+## Confidence Interval {.build}
+
+```{r echo=FALSE}
+ChickWeight1.1 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '0' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '1'),]
+ChickWeight1.2 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '0' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '2'),]
+ChickWeight1.3 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '0' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '3'),]
+ChickWeight1.4 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '0' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '4'),]
+row <- c('day', '1')
+CI(ChickWeight1.1$weight, ci=0.95)
+CI(ChickWeight1.2$weight, ci=0.95)
+CI(ChickWeight1.3$weight, ci=0.95)
+CI(ChickWeight1.4$weight, ci=0.95)
+
+ChickWeight2 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '20' & ChickWeight$Chick != 'NA' & ChickWeight$Diet != 'NA'),]
+ChickWeight2.1 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '20' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '1'),]
+ChickWeight2.2 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '20' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '2'),]
+ChickWeight2.3 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '20' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '3'),]
+ChickWeight2.4 <- ChickWeight[which(ChickWeight$weight != 'NA' & ChickWeight$Time == '20' & ChickWeight$Chick != 'NA' & ChickWeight$Diet == '4'),]
+CI(ChickWeight2.1$weight, ci=0.95)
+CI(ChickWeight2.2$weight, ci=0.95)
+CI(ChickWeight2.3$weight, ci=0.95)
+CI(ChickWeight2.4$weight, ci=0.95)
+
+cidf = tibble(
+   Time = c('0', '0', '0', '0', '20', '20', '20', '20'),
+   Diet = c('1', '2', '3', '4', '1', '2', '3', '4'),
+      weight.upper = c(41.86554, 41.76905, 41.53882, 41.75405, 198.9142, 255.8554, 305.5727, 262.7663),
+      weight.mean = c(41.40000, 40.70000, 40.80000, 41.00000, 170.4118, 205.6000, 258.9000, 233.8889),
+   weight.lower = c(40.93446 , 39.63095, 40.06118, 40.24595, 141.9093, 155.3446, 212.2273, 205.0115))
+cidf 
+```
+
+## Comparing Weights at T = 0 and T = 20
+
+```{r echo=FALSE}
+library(FSA)
+data = data.frame(ChickWeight)
+Data0 =  subset(data, Time == 0 | Time == 20)
+Sum = Summarize(weight ~ Diet + Time,data=Data0)
+Sum$se = Sum$sd*1.96/ sqrt(Sum$n)
+Sum 
+
+ggplot(Sum, aes(x = Diet, y= mean, color = as.factor(Time)))+
+    geom_point(shape = 15, size  = 4, position = position_dodge(.2)) +
+    geom_errorbar(aes(ymin  = mean - se,ymax  = mean + se),
+                      width = 0.2,size  = 0.7,position = position_dodge(.2)) +
+    theme_bw() + theme(axis.title = element_text(face = "bold")) + ylab("Mean Weight")
+```
+
+```{r echo=FALSE}
+ggplot(data, aes(y = weight,x=as.factor(Time))) + geom_boxplot()+ 
+  geom_smooth(method = "lm", se=TRUE, aes(group=1))+ theme_bw()+ xlab("Time") + ylab("Weight")
+```
+
+## Potential Follow-up {.build}
+
+##Conclusion {.build}
+
+We carried out an exploratory data analysis to summarize the dataset and answer the question of concern. We can conclude that these 4 diets do changed the chicken’s weights after 20 days, where the Diet 3 has outperformed the other 3 diets in terms of maximum weight achieved.
+
+
