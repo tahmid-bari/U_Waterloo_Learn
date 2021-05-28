@@ -1,0 +1,160 @@
+---
+title: "Pair Assignment 1"
+author: "MSCI 718"
+date: "January 20, 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+tinytex::install_tinytex()
+#install.packages('tinytex')
+#install.packages("yarrr")
+#install.packages("piratepal")
+#install.packages("pirateplot")
+#install.packages("bootstrap")
+#install.packages("rlang")
+#install.packages("dplyr")
+#install.packages("ggplot2")
+#library(rlang)
+library(dplyr)
+library(ggplot2)
+library(yarrr)
+
+#This data is primarily used for determining how did the four experimental diet received by chickens affect the weight of chikens.
+#There are four variables in this dataset including: chick & diet are categorical variable, time & weight are continuous variable.
+#Since the chick variable is an ordered label of final weight within each group, it's not useful in predicting weights.
+#Usage: ChickWeight
+#Format: An object of class c("nfnGroupedData", "nfGroupedData", "groupedData", "data.frame") containing the following columns:
+#weight: A numeric vector giving the body weight of the chick (gm).
+#Time: A numeric vector giving the number of days since birth when the measurement was made.
+#Chick: An ordered factor with levels 18 < ... < 48 giving a unique identifier for the chick. The ordering of the levels groups chicks on the same diet together and orders them according to their final weight (lightest to heaviest) within diet.
+#Diet: a factor with levels 1, ..., 4 indicating which experimental diet the chick received.
+
+head(ChickWeight)
+str(ChickWeight)
+summary(ChickWeight)
+
+#Measures of central tendency.
+mean(ChickWeight$weight)
+median(ChickWeight$weight)
+sd(ChickWeight$weight)
+#mode(ChickWeight$weight)
+
+aggregate(formula = weight ~ Diet,
+          FUN = mean,
+          data = ChickWeight)
+
+#Basic Scatterplot
+plot(ChickWeight$Time,ChickWeight$weight,xlab = 'time',ylab = 'weight', col="blue")
+
+#Scatterplot with regression line
+ggplot(ChickWeight, aes(x=Time, y=weight)) + 
+  geom_point() +
+    geom_smooth(method=lm) +
+      labs(title = "Scatterplot of ChickWeight (Dataset)",
+        x = "Time (number of days)",
+        y = "Weight of the Chick (gm)")
+
+#histogram of all weights
+hist(x = ChickWeight$weight,
+     xlab = "Weights",
+     main = "Distribution of Chick weights"
+     )
+
+#Boxplot of weight
+ggplot(ChickWeight, aes(y = weight)) + 
+  geom_boxplot()+ggtitle("Box Plot of Weight")
+#plot(ChickWeight$weight~ChickWeight$Diet,xlab = 'diet',ylab = 'weight')
+
+#Outliers of weight
+ggplot(ChickWeight, aes(y=weight)) + 
+  geom_boxplot(outlier.colour = "red", outlier.shape = 8, outlier.size = 2)
+boxplot(weight~Time, data=ChickWeight, col="green")
+
+
+#Boxplot with theme
+ggplot(ChickWeight, aes(x=Diet, y=weight, fill=Diet)) +
+  geom_boxplot() + ggtitle("Box Plot of Weight with Diet Type") +
+  scale_fill_brewer(palette = 'YlGnBU') + theme_light()
+
+#Boxplot with colors
+ggplot(ChickWeight, aes(x=Diet, y=weight, fill=Diet)) +
+  geom_boxplot() + ggtitle("Box Plot of Weight with Diet Type")
+
+#Horizontal boxplot
+ggplot(ChickWeight, aes(x=Diet, y=weight, fill=Diet)) +
+  geom_boxplot() + coord_flip()
+
+#Display means in the Box Plot
+ggplot(ChickWeight, aes(x=Diet, y=weight, fill=Diet)) +
+  geom_boxplot() + ggtitle("Box Plot of Weight with diet Type") + 
+  stat_summary(fun=mean, geom="point", shape=17, colour='red', size=4)
+
+
+#Confidence Interval
+data("ChickWeight")
+index <- ChickWeight$Diet == "3"
+pre <- subset(ChickWeight[index,],Time == 0, select = weight)$weight
+post <- subset(ChickWeight[index,],Time == 20, select = weight)$weight
+
+#Taking mean
+pre.mean <- mean(pre)
+post.mean <- mean(post)
+
+#Difference in means
+mean.weight.gain <- post.mean - pre.mean
+
+#Degree of freedom
+n <- length(pre)
+df <- n-1
+
+#Calculating standard error
+weight.gain <- post - pre
+std.dev = sqrt(sum(weight.gain^2)/(n-1))
+std.err <- std.dev/sqrt(n)
+
+#Calculating t - stat for 95 % confidence interval
+lower.t <- qt(0.025,df)
+upper.t <- qt(0.975,df)
+
+# Confidence interval
+lower.conf <- mean.weight.gain + (std.err * lower.t)
+upper.conf <- mean.weight.gain + (std.err * upper.t)
+
+#Histograms separately for each diet
+hist(ChickWeight$weight[ChickWeight$Diet=='1'],breaks = 30,main = 'Histogram: Weight for Diet 1')
+hist(ChickWeight$weight[ChickWeight$Diet=='2'],breaks = 30,main = 'Histogram: Weight for Diet 2')
+hist(ChickWeight$weight[ChickWeight$Diet=='3'],breaks = 30,main = 'Histogram: Weight for Diet 3')
+hist(ChickWeight$weight[ChickWeight$Diet=='4'],breaks = 30,main = 'Histogram: Weight for Diet 4')
+plot(ChickWeight$weight~ChickWeight$Chick,xlab = 'ordered label by weight within the same diet',ylab = 'weight')
+
+
+ChickWeight$weight<-as.numeric(ChickWeight$weight)
+ChickWeight$Time<- as.numeric(ChickWeight$Time)
+ChickWeight$Chick<-factor(ChickWeight$Chick)
+ChickWeight$Diet<-factor(ChickWeight$Diet)
+ChickWeight<-ChickWeight[-579,] #remove the one NA
+
+#Using ggplot() to map Time to x and Weight to y within the aes() function.Add col=diet to highlight the diet fed to the chicks.
+#Add geom_line() at the end to draw the lines.To draw one line per chick, add group=chick to the aes() of geom_line()
+#The gray area around the curve is a confidence interval, suggesting how much uncertainty there is in this smoothing curve
+ggplot(ChickWeight,aes(x=Time,y=weight,col=Diet)) + geom_line(aes(group=Chick)) + 
+geom_smooth(lwd=2)
+
+#If we want to turn off the confidence interval, we can add an option to the geom_smooth later; specifically "se=FALSE", where "s.e." stands for "standard error."
+ggplot(ChickWeight,aes(x=Time,y=weight,col=Diet)) + geom_line(aes(group=Chick)) + 
+geom_smooth(lwd=2,se=FALSE)
+
+```
+
+*Instructions: Working in groups of size 1 or 2, complete this assignment and submit online to the LEARN Dropbox as a ***_PDF (max 2 pages)_***. Also upload any source files, for example, any .R or .Rmd files that you used, and an appendix (PDF, Rmd, Word, or MD) describing the contributions of each group member. If you discussed problems with other students, please describe the nature of that discussion (e.g., on Team, in a study group). Remember, you can discuss approaches to problems with other groups, but ***_the work you submit must be your own._**
+
+*In this assignment, you will perform exploratory data analysis and summarize a dataset. You may include any number of appendices showing your work.*
+
+Your friend recently got into raising chickens, and has been trying out different diets over days. They want to know if these diets have changed the chicken's weights after 20 days. Use the built-in data set `ChickWeight` to do the following:
+
+ 1. Summarize the dataset: describe the number of observations, what variables there are, their levels of measurement/data type, and give an idea of the range of values using measures of central tendency, dispersion, and range. Use plots as appropriate.
+ 2. Calculate confidence intervals for mean weight at day 0 and 20 for each diet, plot the results, and interpret them. 
+ 3. Write up a conclusion for the effect of diets on chickens after 20 days using evidence from your results.
+
