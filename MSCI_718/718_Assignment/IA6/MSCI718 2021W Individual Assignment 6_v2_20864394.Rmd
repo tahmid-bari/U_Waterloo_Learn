@@ -1,0 +1,367 @@
+---
+title: "Individual Assignment 6"
+author: "MSCI 718 - 20864394"
+date: April 23, 2021
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)     # Read excel
+library(readr)      # Read (csv) library
+library(dplyr)      # Data Manipulation
+library(ggplot2)    # Creating graphics
+library(rlang)      # Functions for Base Types and Core R
+library(fpp)        # Data for "Forecasting: Principles and Practice"
+library(ggfortify)  # Data Visualization for Statistical Analysis Results
+library(knitr)      # For knitting document and include_graphics function
+library(lubridate)  # Dates and Time
+library(tseries)    # Time series
+library(forecast)   # Forecast
+```
+
+*Instructions: Complete this assignment individually and submit online to the LEARN Dropbox as a ***_PDF (max 2 pages)_***. Also upload any source files, for example, and any .R or .Rmd files that you used. If you discussed problems with other students, please describe the nature of that discussion (e.g., on Team, in a study group). Remember, you can discuss approaches to problems with other people, but ***_the work you submit must be your own._**
+
+*Learning Objectives: In this assignment, you will perform a time series analysis. You will construct a model using the techniques found in class, or elsewhere. Finally, you will need to assess and describe the accuracy of your model. *
+
+
+**For your report**, include the following sections:
+
+ 1. Problem statement and data used: You are back to your day job as a data analyst at Bank of America and would like to know how many potential complaints you would get from consumers in 2022. You've answered this question before, but this time you have more tools at your disposal. You know that there is a public source for complaint data: https://www.consumerfinance.gov/data-research/consumer-complaints/, and once again plan to use this to answer your question. 
+ 2. Planning: Plan your analysis based on the problem statement. Include data wrangling, assumption tests, and any other analyses you may need to conduct.
+ 3. Analysis: Conduct a time series analysis, along with any appropriate assumption and accuracy checks. If you do not have sufficient data to answer the question, answer a related question that will be useful to your manager.
+ 4. Conclusion: Write up your analyses in a report to your manager (who has not taken MSCI 718, and does not understand statistics) and explain your conclusions.
+
+
+ **Grading Criteria**
+ You will be graded against the same rubric that was used for pair assignments 1 and 2. We will be looking for a number of things:
+ 
+ 1. Data selection: How you chose data and your problem statement. We will consider how your problem statement fits both the data, and the method (time series analysis) that you need to apply
+ 2. Process and clarity of thought: Did you clearly apply a step by step process? Why did you chose the steps you did? Did you miss out on anything? Some examples would be ensuring you wrangled your data appropriately, checked the data against any assumptions required for the analysis, and did not do any work that was not required for this specific test.
+ 3. Presentation: Use bulltets, subtitles, and the APA style for your report. Use simple language, do not use complicated words unless they help you describe a complex idea. Use graphs judiciously. Show your work - if you do not include something in the main report, the teaching staff will not grade it.
+
+
+## Set working directory {.build}
+```{r , echo = TRUE, warning=TRUE}
+setwd("C:/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_718/718_Assignment/Individual Assignment 6/IA6_v2")
+```
+
+## Check working directory {.build}
+```{r , echo = TRUE, warning=TRUE}
+getwd()
+```
+
+## Read the data file {.build}
+```{r , echo = TRUE, warning=TRUE}
+ConsumerComplaints <- read.csv(paste("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 6\\IA6_v2\\complaints_boa.csv"))
+
+file.exists("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 6\\IA6_v2\\complaints_boa.csv")
+```
+
+## Problem Statement
+As a data analyst at Bank of America, would like to know how many potential complaints would get from consumers in 2022
+
+## Data
+Our data set contains the list of consumer complaints received by the Consumer Finance Protection Bureau (CFPB) about the financial product services offered by the Bank of America across the United States. The data set contains complaints received by the CFPB for (Bank of America) and it was retrieved from the www.consumerfinance.gov site (https://www.consumerfinance.gov/data-research/consumer-complaints/search/). I have filtered the date range from December 2011 till April 2021 and company name as ‘Bank of America, National Association’.
+The original data contains 100,526 observations of 18 variables. We have seen that (Date.recieved) was a (character) variable instead of date so, we need transform this variable to its appropriate type. I would like to perform time series on yearly data so I will extract Year, Month & Day and then later take monthly sums of the complaints across all the years. Finally, I have transformed the data to a timeseries so I can begin the time series analysis. I will slice the data such that it starts from December 2011 and ends in April 2021
+
+
+## Planning 
+I will perform a time series analysis of the from the data set and thereby, constructing a model. Steps are given below:
+Exploratory data analysis | Decomposition of data | Test the stationarity | Fit into a model | Calculate forecasts
+
+
+## Tidy {.build}
+Now that we have our data, what are the variables? What are the observations? Is the data tidy?
+
+```{r , echo = TRUE, warning=TRUE}
+cc <- ConsumerComplaints
+
+# Take a look at the class of the dataset Consumer Complaints of Bank of America
+class(cc)
+
+# Take a look at the entries
+head(cc)
+str(cc)
+names(cc)
+dim(cc)
+```
+
+# Tidy {.build}
+```{r , echo = TRUE, warning=TRUE}
+# Check for missing values
+sum(is.na(cc))
+
+# Check the frequency of the time series
+frequency(cc)
+
+# Check the cycle of the time series
+cycle(cc)
+
+# Review the table summary
+summary(cc)
+ts(cc)
+
+```
+
+## Transform "Date.received" variable to its appropriate type
+```{r , echo = TRUE, warning=TRUE}
+dates <- "Date.received"
+cc[, dates] = lapply(dates, function(x) as.Date(cc[,x],'%m/%d/%Y'))
+sapply(cc, class)
+```
+
+## Preprocess the timestamp in order to efficiently work
+```{r , echo = TRUE}
+cc$year  <- lubridate::year(cc$Date.received)
+cc$month <- lubridate::month(cc$Date.received) 
+cc$day   <- lubridate::day(cc$Date.received)
+cc$Date.received <- NULL
+```
+
+## Perform the latter part using 'dplyr'
+```{r , echo = TRUE, warning=TRUE}
+monthly <- cc <- cc %>%
+  group_by(year, month)
+
+per_month <- monthly %>%
+  dplyr::summarize(num_complaint = n())
+```
+
+# Data preparation
+```{r , echo = TRUE, warning=TRUE}
+head(per_month,n=1)
+tail(per_month, n=1)
+per_month$Date <- paste(per_month$year, per_month$month,sep = "-")
+per_month <- per_month[c("date", "num_complaint")]
+cc <- ts((per_month$num_complaint), start = c(2011,12), end = c(2021, 01), frequency = 12)
+start(cc)
+end(cc)
+class(cc)
+```
+
+# Plot of Complaints over the Year
+```{r , echo = TRUE, warning=TRUE}
+plot(cc,xlab="Year", ylab = "No. of Complaints", main="Bank of America - Consumer Complaints from 2011 to 2021",col = 'blue', bty = 'l')
+
+autoplot(cc) + labs(x ="Year", y = "No. of Complaints", title="Bank of America - Consumer Complaints from 2011 to 2021")
+
+boxplot(cc~cycle(cc),xlab="Month", ylab = "No. of Complaints", main ="Bank of America - Consumer Complaints from 2011 to 2021", col = 'grey')
+
+```
+
+# Comparing seasons with plot
+```{r , echo = TRUE, warning=TRUE}
+plot(stl(cc, s.window = 'periodic', t.window = 15))
+
+seasonplot(cc, year.labels = T, year.labels.left = T, col = 1:4, labelgap = 0.4, 
+           main = 'Comparing Seasons' )
+```
+
+From these exploratory plots, we can make some initial inferences:
+
+The number of consumer complaints increase over time with each year which may be indicative of an increasing trend, perhaps due to increasing number of customers and increasing more bank products over the time.
+Consumer complaints appears to be multiplicative time series as the number of bank customer increases, it appears so does the pattern of seasonality.
+There do not appear to be any outliers and there are no missing values. Therefore, no data cleaning is required.
+
+
+## Time Series decomposition
+We will decompose the time series for estimates of trend, seasonal, and random components using moving average method.
+The multiplicative model is: Y[t]=T[t]∗S[t]∗e[t]
+Where:
+Y(t) is the number of consumer complaints at time t, T(t) is the trend component at time t,
+S(t) is the seasonal component at time t, e(t) is the random error component at time t.
+With this model, we will use the decompose function in R. Continuing to use ggfortify for plots, in one line, autoplot these decomposed components to further analyse the data.
+
+```{r , echo = TRUE, warning=TRUE}
+decomposecc <- decompose(cc,"multiplicative")
+autoplot(decomposecc)
+
+```
+
+## Test Stationarity for the Time Series
+A stationary time series has the conditions that the mean, variance and covariance are not functions of time. In order to fit arima models, the time series is required to be stationary. We will use two methods to test the stationarity.
+
+1. Test stationarity of the time series (ADF)
+In order to test the stationarity of the time series, let’s run the Augmented Dickey-Fuller Test using the adf.test function from the tseries R package.
+
+First set the hypothesis test:
+The null hypothesis H0 : that the time series is non stationary
+The alternative hypothesis HA : that the time series is stationary
+
+```{r , echo = TRUE, warning=TRUE}
+adf.test(cc)
+
+```
+
+As a rule of thumb, where the p-value is less than 5%, we strong evidence against the null hypothesis, so we reject the null hypothesis. The test outputs a p-value (0.4089) greater than 0.05 therefore, the data are not stationary. We will use the earlier referenced to ARIMA model that automates the process of differencing and ARMA parameter selection for us. Next we check for autocorrelation.
+
+
+## Test stationarity of the time series (Autocorrelation)
+Another way to test for stationarity is to use autocorrelation. We will use autocorrelation function (acf) in from the base stats R package. This function plots the correlation between a series and its lags i.e previous observations with a 95% confidence interval in blue. If the autocorrelation crosses the dashed blue line, it means that specific lag is significantly correlated with current series.
+
+
+```{r , echo = TRUE, warning=TRUE}
+autoplot(acf(cc, plot=FALSE)) + labs(title="Correlogram of Bank of America - Consumer Complaints from 2011 to 2021")
+autoplot(pacf(cc, plot=FALSE)) + labs(title="Correlogram of Bank of America - Consumer Complaints from 2011 to 2021")
+
+```
+
+The maximum at lag 1 or 12 months, indicates a positive relationship with the 12 month cycle.
+The analysis above has shown a lag correlation of 2 for the ACF test and a lag correlation of 1 for the PACF. These tests tell us the correlation between points separated by various time lags. So, if we had to manually assess which ARIMA models to use, a good point to start would be with p = 2 & q = 1 values or p = 1 and q = 0.
+
+
+# Review random time series for any missing values
+```{r , echo = TRUE, warning=TRUE}
+decomposecc$random
+
+```
+
+# Autoplot the random time series from 7:126 which exclude the NA values
+```{r , echo = TRUE, warning=TRUE}
+autoplot(acf(decomposecc$random[7:104],plot=FALSE)) + labs(title = "Correlogram of Bank of America - Consumer Complaints from 2011 to 2021")
+
+autoplot(pacf(decomposecc$random[7:104],plot=FALSE)) + labs(title = "Correlogram of Bank of America - Consumer Complaints from 2011 to 2021")
+
+```
+We can see that the acf of the residuals is centered around 0.
+
+## Fit a Time Series (ARIMA Model)
+Use the auto.arima function from the forecast R package to fit the best model and coefficients, given the default parameters including seasonality as TRUE. Note we have used the ARIMA modeling procedure as referenced.
+
+```{r , echo = TRUE, warning=TRUE}
+arimacc <- auto.arima(cc)
+arimacc
+
+```
+
+## Fit a Time Series (ARIMA Model) - Plot
+The ggtsdiag function from ggfortify R package performs model diagnostics of the residuals and the acf. will include a autocovariance plot.
+
+```{r , echo = TRUE, warning=TRUE}
+ggtsdiag(arimacc)
+
+```
+
+The residual plots appear to be centered around 0 as noise, with no pattern.
+
+## Calculate Forecast
+Finally we can plot a forecast of the time series using the forecast function, again from the forecast R package, with a 95% confidence interval where h is the forecast horizon periods in months.
+
+```{r , echo = TRUE, warning=TRUE}
+#forecastcc <- forecast(arimacc, level = c(95), h = 12)
+#autoplot(forecastcc)
+
+forecastcc <-forecast(arimacc, h=48)$mean
+arimacc <- auto.arima(cc, stepwise=FALSE, approximation=FALSE)
+arima.Fr <-forecast(arimacc, h=48)
+plot(arima.Fr)
+
+```
+
+
+## Next fit models
+For this analysis we use the Forecast package, which is pretty efficient in model fitting.
+
+```{r , echo = TRUE, warning=TRUE}
+models <- list(
+  mod_arima = auto.arima(cc, ic = 'aicc', stepwise = F),
+  mod_exp   = ets(cc, ic = 'aicc', restrict = F),
+  mod_neural= nnetar(cc, p = 12, size = 25),
+  mod_tbats = tbats(cc, ic = 'aicc', seasonal.periods = 12),
+  mod_bats  = bats(cc, ic = 'aicc', seasonal.periods = 12),
+  mod_stl   = stlm(cc, s.window = 12, ic = 'aicc', robust = T, method = 'ets'),
+  mod_sts   = StructTS(cc)
+  )
+
+```
+
+## Forecasts
+```{r , echo = TRUE, warning=TRUE}
+forecasts <- lapply(models, forecast, 12)
+forecasts$naive <- naive(cc)
+#forecasts$arima <- arima(cc)
+par(mfrow = c(4, 2))
+par(mar = c(1,1,1,1))
+for (f in forecasts) {
+  plot(f)
+  lines(cc, col = 'red')
+}
+
+```
+
+ARIMA model has given a forecast with time series values. Structural models seem to have done a better job at fitting the data. A naive model which forecasts a flat line is also included in this analysis.
+
+
+## Model Performance Diagnostics
+```{r , echo = TRUE, warning=TRUE}
+library(forecast)
+acc <- lapply(forecasts, function(f){
+  accuracy(f, test_cc)[10,,drop = F]
+})
+
+acc <- Reduce(rbind, acc)
+row.names(acc) <- names(forecasts)
+acc <- acc[order(acc[,'MASE']),]
+round(acc, 2)
+
+```
+
+## FIT the ARMIA model {.build}
+```{r echo=TRUE}
+fit <- arima(log(cc), c(2, 1, 1), seasonal = list(order = c(1, 0, 0), period = 12))
+fit
+```
+
+## Extracting future values - Predicting Future values {.build}
+
+```{r echo=TRUE}
+# Predicting the values for the next two years
+predicted_values <- predict(fit, n.ahead = 2*12)
+
+# predicted_values are in "log", hence the conversion
+# predicted_values is a list with two items: pred and se. (prediction and standard error)
+
+predicted_values_converted <- 2.718^predicted_values$pred
+
+```
+
+## Plotting the model and the forecast {.build}
+
+```{r echo=TRUE}
+ts.plot(cc,2.718^predicted_values$pred, log = "y", lty = c(1,3), xlab = "Year", ylab = "Number of Complaints", main="Consumer Complaints (BOA): Original and Forecasted Values")
+
+```
+
+## Model Validity - Testing the Model {.build}
+
+- Split the original data set into 2 | - Fit an ARIMA model to the first one | - Compare the predicted values and the original values
+
+## Testing the Model
+
+```{r echo=TRUE}
+part1 <- ts(cc, frequency=12, start=c(2011,12), end=c(2021,01))
+fit_test <- arima(log(part1), c(2, 1, 1), seasonal = list(order = c(1, 0, 0), period = 12))
+predicted_values_test <- predict(fit_test, n.ahead = 2*12)
+predicted_values_test_converted <- 2.718^predicted_values_test$pred
+
+#Predicted values
+pred_2022 <- round(predicted_values_test_converted, digits=0)
+pred_2022
+
+#Original values
+orig_2022 <- tail(cc, 12)
+orig_2022
+
+```
+
+From the two sets of values, we can see that the predictions are very close to the original values. Thus, our model is Justifiable.
+
+## Check normality using Q-Q plot
+```{r echo=TRUE}
+qqnorm(residuals(fit))
+qqline(residuals(fit))
+
+adf.test(fit$residuals, alternative ="stationary")
+
+```
