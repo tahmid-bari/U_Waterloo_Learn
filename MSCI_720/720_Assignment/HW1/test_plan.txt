@@ -1,4 +1,4 @@
-# Test Empty arguments:
+# Test Empty arguments: 
 
 Input:
 python indexEngine.py
