@@ -1,0 +1,282 @@
+---
+title: "Individual Assignment 4"
+author: "MSCI 718 - 20864394"
+date: April 8, 2021
+output: pdf_document
+---
+ 
+```{r load-packages, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("csv")
+#install.packages("xlsx")
+#install.packages("naniar")
+#install.packages("dataspice")
+#install.packages("Hmisc")
+#install.packages("Rtools")
+#install.packages("data.table")
+#install.packages("car")
+#install.packages("corrgram")
+#install.packages("corrplot")
+#install.packages("ggiraph")
+#install.packages("ggiraphExtra")
+#install.packages("magrittr")
+
+library(dplyr)
+library(ggplot2)
+library(readxl)     # Read excel
+library(readr)      # Read csv
+library(tidyverse)
+library(naniar)
+library(dataspice)
+library(lattice)
+library(survival)
+library(Formula)
+library(data.table)
+library(knitr)      # For knitting document and include_graphics function
+library(Hmisc)      # Useful for data analysis, high - level graphics, imputing missing values, advanced table making,                     # model fitting & diagnostics (linear regression, logistic regression & cox regression)
+library(psych)
+library(car)
+library(corrgram)
+library(corrplot)
+library(ggiraph)
+library(GGally) #for ggpairs
+library(ggiraphExtra)
+library(pastecs)
+library(magrittr)
+```
+
+*Instructions: Complete this assignment individually and submit online to the LEARN Dropbox as a ***_PDF (max 2 pages)_***. Also upload any source files, for example, and any .R or .Rmd files that you used. If you discussed problems with other students, please describe the nature of that discussion (e.g., on Team, in a study group). Remember, you can discuss approaches to problems with other people, but ***_the work you submit must be your own._**
+
+*Learning Objectives: In this assignment, you will perform a multiple linear regression, including ***_at least one comparison between two models._** *You will estimate the coefficients and assess the accuracy of coefficient estimates. Finally, you will need to assess and describe the accuracy of your model, and argue for choosing the set of parameters you chose either because of its predictive power, or because it led to a valuable insight. *
+
+**For your report**, include the following sections:
+
+ 1. Problem statement and data used: You are interested in getting into real estate, and hear that Australia's markets are hot right now. You've picked a city - Melbourne - but before you think about what home to buy, you want to understand the market a bit better. **Analyze this Melbourne housing dataset** to answer a question that will give better insight into your purchase,  using at least one model comparison or method of variable selection: [https://www.kaggle.com/dansbecker/melbourne-housing-snapshot](https://www.kaggle.com/dansbecker/melbourne-housing-snapshot). Some ideas:
+ 
+    a. The first rule of real estate is "location, location, location". Is this true? Compare the influence of location vs. features of the home. You may need to refine this into a more specific question.
+    b. Create and evaluate the most accurate model predicting a home's price (pick just one of a house, a unit, or townhome, and compare within that set).
+    c. Find the areas in town that will give you the biggest house for the price.
+    d. Imagine you are selling a 2-bedroom, 2-bathroom home in a given location. What's the best upgrade you can make to it before selling?
+    e. Determine the three most important factors determining house price.
+
+ 2. Planning: Plan your analysis based on the problem statement. Include data wrangling, assumption tests, and any other analyses you may need to conduct.
+ 3. Analysis: Conduct a multiple linear regression, along with any appropriate assumption and accuracy checks. You will need to choose from two or more predictor variables, and compare your final model against other possible options (either through variable selection or to answer a research question).
+ 4. Conclusion: Write up your analyses in a report to your family member who is investing in you (who has not taken MSCI 718, and does not understand statistics) and explain your conclusions.
+
+ **Grading Criteria**
+ You will be graded against the same rubric that was used for pair assignments 1 and 2. We will be looking for a number of things:
+ 
+ 1. Data selection: How you chose data and your problem statement. We will consider how your problem statement fits both the data, and the method (regression) that you need to apply.
+ 2. Process and clarity of thought: Did you clearly apply a step by step process? Why did you chose the steps you did? Did you miss out on anything? Some examples would be ensuring you wrangled your data appropriately, checked the data against any assumptions required for the analysis, and did not do any work that was not required for this specific test.
+ 3. Presentation: Use bullets, subtitles, and the APA style for your report. Use simple language, do not use complicated words unless they help you describe a complex idea. Use graphs judiciously. Show your work - if you do not include something in the main report, the teaching staff will not grade it.
+
+
+## Set working directory {.build}
+```{r include=FALSE}
+setwd("C:/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_718/718_Assignment/Individual Assignment 4/IA4_New")
+```
+
+## Check working directory {.build}
+```{r include=FALSE}
+getwd()
+```
+
+## Read the data file {.build}
+```{r include=FALSE}
+#mel <- read.csv("melb_data.csv")
+
+mel <- read.csv(paste("C:/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_718/718_Assignment/Individual Assignment 4/IA4_New/melb_data.csv"))
+                   
+file.exists("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 4\\IA4_New\\melb_data.csv")
+```
+
+## Problem Statement
+This report aims to predict the price of the houses by using Bedroom, Bathroom, Distance from Central Business District, Land size of the house and Building area of the house.
+
+## Data
+It consists of 13580 data points for 21 different parameters required for purchasing a house which were built from the year of mid 1880s to 2017 in Melbourne
+The dataset used in this analysis is Melbourne Housing Snapshot extracted from kaggle website. It consists of 13580 data points for 21 different parameters required for purchasing a house.
+
+## Planning 
+Both the models are built using Multiple Linear Regression and will be compared through ANOVA Test. All the missing values have been removed from the dataset for a better model. Prices for the regions “Western Metropolitan” and “Eastern Metropolitan” will be predicted. Land sizes less than 1000 with no more than 5 bedrooms and bathrooms will be considered, so the dataset has been made tidy accordingly. There are total of 586 data points which will be considered for modeling.
+
+
+```{r include=FALSE}
+# Handling Missing Data
+mel_region_no_missing<-na.omit(mel)
+
+
+```{r include=FALSE}
+mel_region <- filter(mel_region_no_missing, Regionname =="Western Metropolitan" | Regionname =="Eastern Metropolitan")
+nrow(mel_region)
+
+mel_region_filtered <- filter(mel_region, (Type=="h" & Landsize > 40 & Landsize < 1000 ) & (Price < 1500000) & (Bedroom2 <= 5 & Bedroom2 >0) & (Bathroom <= 5 & Bathroom >0) & ( Distance < 10) & (BuildingArea > 0 & BuildingArea < 600))
+
+mel_region_filtered <- mel_region_filtered[order(runif(nrow(mel_region_filtered))),]
+```
+
+## Tidy {.build}
+Now that we have our data, what are the variables? What are the observations? Is the data tidy?
+In the 'mel' dataset, are 13580 observations with 21 variables:
+Each variable has a column, and each observation on those variables has one row
+
+```{r echo=FALSE}
+mel
+dim(mel)
+mel_region_filtered
+head(mel_region_filtered)
+summary(mel_region_filtered)
+dim(mel_region_filtered)
+```
+
+```{r include=FALSE}
+write.csv(mel_region_filtered, file = "mel_final.csv")
+```
+
+## Assumptions of both the models have been checked
+
+```{r include=FALSE}
+library(gvlma)
+
+mel_model1<- lm(Price ~ Distance + Landsize + BuildingArea, data = mel_region_filtered)
+mel_model2<- lm(Price ~ Distance + Landsize + BuildingArea + Rooms + Bathroom, data = mel_region_filtered)
+```
+
+```{r include=FALSE}
+library(car)
+library(lmtest)
+
+vif(mel_model1)
+1/vif(mel_model1)
+mean(vif(mel_model1))
+max(vif(mel_model1))
+mean(vif(mel_model1))
+min(1/vif(mel_model1))
+
+vif(mel_model2)
+1/vif(mel_model2)
+mean(vif(mel_model2))
+max(vif(mel_model2))
+mean(vif(mel_model2))
+min(1/vif(mel_model2))
+```
+
+## Testing Residuals for Independence
+
+```{r include=FALSE}
+library(lmtest)
+
+dwtest(mel_model1)
+dwtest(mel_model2)
+#durbinWatsonTest(mel_model1)
+```
+
+* The predictor variables are quantitative and the outcome variable is quantitative, continuous, and unbounded for both the models.
+* Through the variances value, I can clearly say that the data meets the assumption of non-zero variances for both the models.
+* Multicollinearity can be verified through VIF Factor. The largest VIFs are 1.18 and 1.51 which are less than 10; the average vifs are 1.12 and 1.39, close to 1. The lowest tolerances (1/VIF) are 0.84 and 0.65. Thus, we can say there is no collinearity in our data.
+* Through the “Residual Vs Fitted” plots shown below in the Appendix for both the model, the data meets the Assumptions of Linearity. Also, the residuals are equally spread above and below the regression line in “Residual Vs Fitted” plots, so both the models meet the Assumption of homoscedasticity.
+* Through the visual inspection of the QQ plots shown in Appendix, it shows the residuals for both the models follow a normal pattern 
+* From the output of Durbin-Watson test it is clear that that the both the models do meet the assumption of independent errors as the p value is greater than alpha value (0.05) value and DW test statistic is close to 2 for both the Models.
+
+
+## Modelling
+
+```{r include=FALSE}
+library(gvlma)
+
+mel_model1<- lm(Price ~ Distance + Landsize + BuildingArea, data = mel_region_filtered)
+summary(mel_model1)
+# gvlma(model1_Melbourne_housing)
+
+mel_model2 <- lm(Price ~ Distance + Landsize + BuildingArea + Rooms + Bathroom , data = mel_region_filtered)
+summary(mel_model2)
+# gvlma(mel_model2)
+```
+
+# Analysis of Model_1
+All 3 predictor variables have an influence on Price of the House at the 5% level of significance. We can say 28% change in the price of the house can be predicted by Distance form C.B.D, Land Size and Building Area.
+
+# Analysis of Model_2
+All 5 predictor variables have an influence on Price of the House at the 5% level of significance. Since R^2 value is 0.38, We can say 38% change in the price of the house can be predicted by Distance form C.B.D, Land Size Building Area, Rooms and Bathrooms.
+
+```{r include=FALSE}
+mel_region_filtered$fitted <- mel_model1$fitted
+mel_region_filtered$residuals <- mel_model1$residuals
+mel_region_filtered$standardized.residuals <- rstandard(mel_model1)
+```
+
+### Outliers
+
+```{r include=FALSE}
+possible.outliers <- subset(mel_region_filtered, standardized.residuals < -1.96 | standardized.residuals > 1.96)
+possible.outliers
+nrow(possible.outliers)
+nrow(possible.outliers)/nrow(mel_region_filtered)*100
+plot(possible.outliers)
+```
+
+The `r nrow(possible.outliers)` residuals are above or below 1.96 standard deviations. As this represents `r nrow(possible.outliers)/nrow(Melbourne_housing_region_filtered)*100`% of the observations, I do not consider any of these observations as outliers and continued with all `r nrow(Melbourne_housing_region_filtered)` observations included in the model.
+
+### Influential Cases
+
+```{r include=FALSE}
+mel_region_filtered$cooks_1 <- cooks.distance(mel_model1)
+plot(sort(mel_region_filtered$cooks_1, decreasing=TRUE))
+
+mel_region_filtered$cooks_2 <- cooks.distance(mel_model2)
+plot(sort(mel_region_filtered$cooks_2, decreasing=TRUE))
+```
+
+```{r include=FALSE}
+max(mel_region_filtered$cooks_1)
+max(mel_region_filtered$cooks_2
+    
+## ggplot(mel_region_filtered, aes(y=residuals, x=fitted, colour=cooks>3*mean(cooks))) + geom_point() + scale_color_manual(values=c("blue", "grey"))
+```
+
+Cook's distance was a maximum of `r max(mel_region_filtered$cooks_1)` and `r max(mel_region_filtered$cooks_2)` for Model 1 and Model 2 respectively, which are far below the chosen cutoff value of 1. Thus I conclude that there are __no influential cases__ in our data. The output for Cooks distance has been shown in the Appendix.
+
+
+###  Model Comparison
+```{r include=FALSE}
+anova(mel_model1, mel_model2)
+```
+
+The ANOVA test result shows significant result (F(582,582)=51.43, p < 2.2e-16) at 5% Level of significance. This means that adding the 2 variables (Rooms and Bathroom) to the model made it a better model as compared to Model-1.
+
+## Conclusion
+After seeing the data analysis, Model -2 is a better model as compared to Model-1. Hence, we say that Rooms and Washroom does add significance to the Model - 1. Distance from City center, Rooms and Bathroom are the three most important factors in determining the Price of the house. Price of the house tends to decreases by $64775.79 for every 1 km from Melbourne Center.
+
+## Plots of Model_1
+
+```{r echo=FALSE}
+plot(mel_model1)
+# anova(mel_model2, mel_model1)
+```
+
+## Plots of Model_2
+
+```{r echo=FALSE}
+plot(mel_model2)
+# anova(mel_model2, mel_model1)
+```
+
+## Durbin-Watson Test - Model_1
+
+```{r echo=FALSE}
+library(lmtest)
+dwtest(mel_model1)
+```
+
+## Durbin-Watson Test - Model_2
+
+```{r echo=FALSE}
+library(lmtest)
+dwtest(mel_model2)
+```
+
+### ANOVA Test
+```{r echo=FALSE}
+anova(mel_model1, mel_model2)
+# anova(mel_model2, mel_model1)
+```
