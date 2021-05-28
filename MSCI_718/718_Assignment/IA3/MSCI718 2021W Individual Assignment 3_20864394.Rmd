@@ -1,0 +1,182 @@
+---
+title: "Individual Assignment 3"
+author: "MSCI 718"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("csv")
+#install.packages("xlsx")
+#install.packages("lubridate")
+#install.packages("tseries")
+#install.packages("forecast")
+#install.packages("car")
+library(rlang)
+library(ggplot2)
+library(readxl)     # Read excel
+library(readr)      # Read csv
+library(tidyverse)
+library(knitr)      # For knitting document and include_graphics function
+library(lubridate)
+library(dplyr)
+library(tseries)    # Time series
+library(forecast)   # Forecast
+library(car)
+```
+
+*Instructions: Complete this assignment individually and submit online to the LEARN Dropbox as a ***_PDF (max 2 pages)_***. Also upload any source files, for example, and any .R or .Rmd files that you used. If you discussed problems with other students, please describe the nature of that discussion (e.g., on Team, in a study group). Remember, you can discuss approaches to problems with other people, but ***_the work you submit must be your own._**
+
+*Learning Objectives: In this assignment, you will perform a simple linear regression. You will estimate the coefficients and assess the accuracy of coefficient estimates. Finally, you will need to assess and describe the accuracy of your model. *
+
+
+**For your report**, include the following sections:
+
+ 1. Problem statement and data used: You are the data analyst at Bank of America and would like to know how many potential complaints you would get from consumers in 2022. You know that there is a public source for complaint data: https://www.consumerfinance.gov/data-research/consumer-complaints/, and plan to use this to answer your question. 
+ 2. Planning: Plan your analysis based on the problem statement. Include data wrangling, assumption tests, and any other analyses you may need to conduct.
+ 3. Analysis: Conduct a linear regression, along with any appropriate assumption and accruacy checks.
+ 4. Conclusion: Write up your analyses in a report to your manager (who has not taken MSCI 718, and does not understand statistics) and explain your conclusions.
+
+
+ **Grading Criteria**
+ You will be graded against the same rubric that was used for pair assignments 1 and 2. We will be looking for a number of things:
+ 1. Data selection: How you chose data and your problem statement. We will consider how your problem statement fits both the data, and the method (regression) that you need to apply 
+ 2. Process and clarity of thought: Did you clearly apply a step by step process? Why did you chose the steps you did? Did you miss out on anything? Some examples would be ensuring you wrangled your data appropriately, checked the data against any assumptions required for the analysis, and did not do any work that was not required for this specific test.
+ 3. Presentation: Use bulltets, subtitles, and the APA style for your report. Use simple language, do not use complicated words unless they help you describe a complex idea. Use graphs judiciously. Show your work - if you do not include something in the main report, the teaching staff will not grade it.
+
+
+## Set working directory {.build}
+```{r}
+setwd("C:/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_718/718_Assignment/Individual Assignment 3")
+```
+
+## Check working directory {.build}
+```{r}
+getwd()
+```
+
+## Read the data file {.build}
+```{r}
+cData <- read.csv("consumer_complaints.csv")
+file.exists("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 3\\consumer_complaints.csv")
+```
+
+## Tidy {.build}
+Now that we have our data, what are the variables? What are the observations? Is the data tidy?
+
+```{r echo=FALSE}
+cData
+str(cData)
+summary(cData)
+```
+
+## Narrow our data to only 2 variables: Date.received & Product
+```{r}
+cData <- cData[c('date_received', 'product')]
+```
+
+## Transform "Date.received" variable to its appropriate type
+```{r}
+dates <- "date_received"
+cData[, dates] = lapply(dates, function(x) as.Date(cData[,x],'%m/%d/%Y'))
+sapply(cData, class)
+```
+
+## Product with the most consumer complaints
+```{r}
+table(cData$Product)
+```
+
+## To subset our data to focus on 'Mortgage' product
+```{r}
+cData <- subset(cData, product == 'Mortgage')
+```
+
+## Preprocess the timestamp in order to efficiently work
+```{r}
+cData$year  <- lubridate::year(cData$date_received)
+cData$month <- lubridate::month(cData$date_received) 
+cData$day   <- lubridate::day(cData$date_received)
+cData$date_received <- NULL
+```
+
+## Perform the latter part using 'dplyr'
+```{r}
+monthly <- cData <- cData %>% group_by(year, month)
+per_month <- monthly %>% dplyr::summarize(num_complaint = n())
+```
+
+```{r}
+head(per_month,n=1)
+tail(per_month, n=1)
+per_month$Date <- paste(per_month$year, per_month$month,sep = "-")
+per_month <- per_month[c("Date", "num_complaint")]
+cc <- ts((per_month$num_complaint),start = c(2011,1), end = c(2021, 12), frequency = 12)
+start(cc)
+end(cc)
+class(cc)
+```
+
+```{r}
+plot(cc, ylab = '', main = 'Consumer complaints 2011-2021', col = 'blue', bty = 'l')
+boxplot(cc ~ cycle(cc))
+```
+
+```{r}
+plot(stl(cc, s.window = 'periodic', t.window = 15))
+seasonplot(cc, year.labels = T, year.labels.left = T, col = 1:4, labelgap = 0.4, 
+           main = 'Comparing Seasons' )
+```
+
+## Test for Stationarity
+```{r}
+adf.test(cc)
+```
+
+## Autocorrelation Analysis
+```{r}
+acf(cc)
+pacf(cc)
+```
+
+## Model Building
+```{r}
+test_cc <- window(cc, start = c(2021, 1))
+train_cc<- window(cc, end = c(2020, 12))
+```
+
+#Next fit models
+```{r}
+models <- list(
+  mod_arima = auto.arima(train_cc, ic = 'aicc', stepwise = F),
+  mod_exp   = ets(train_cc, ic = 'aicc', restrict = F),
+  mod_neural= nnetar(train_cc, p = 12, size = 25),
+  mod_tbats = tbats(train_cc, ic = 'aicc', seasonal.periods = 12),
+  mod_bats  = bats(train_cc, ic = 'aicc', seasonal.periods = 12),
+  mod_stl   = stlm(train_cc, s.window = 12, ic = 'aicc', robust = T, method = 'ets'),
+  mod_sts   = StructTS(train_cc)
+  )
+```
+
+#Forecasts
+```{r}
+forecasts <- lapply(models, forecast, 12)
+forecasts$naive <- naive(train_cc)
+par(mfrow = c(4, 2))
+par(mar = c(1,1,1,1))
+for (f in forecasts) {
+  plot(f)
+  lines(test_cc, col = 'red')
+}
+```
+
+## Model Performance Diagnostics
+```{r}
+acc <- lapply(forecasts, function(f){
+  accuracy(f, test_cc)[2,,drop = F]
+})
+acc <- Reduce(rbind, acc)
+row.names(acc) <- names(forecasts)
+acc <- acc[order(acc[,'MASE']),]
+round(acc, 2)
+```
