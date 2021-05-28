@@ -1,0 +1,307 @@
+---
+title: "Pair Assignment 2"
+author: "MSCI 718"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("csv")
+#install.packages("xlsx")
+#install.packages("pastecs")
+#install.packages("rcompanion")
+#install.packages("ggpubr")
+#install.packages("outliers")
+library(rlang)
+library(dplyr)
+library(ggplot2)
+library(readxl)     # Read excel
+library(readr)      # Read csv
+library(tidyverse)
+library(knitr)      # For knitting document and include_graphics function
+library(gridExtra)  # For including grids of plots
+library(ggpubr)     # For correlations test
+library(outliers)   # For outlier treatment
+```
+
+*Instructions: Working in groups of size 1 or 2, complete this assignment and submit online to the LEARN Dropbox as a ***_PDF (max 2 pages)_***. Also upload any source files, for example, any .R or .Rmd files that you used, and an appendix (PDF, Rmd, Word, or MD) describing the contributions of each group member. If you discussed problems with other students, please describe the nature of that discussion (e.g., on Team, in a study group). Remember, you can discuss approaches to problems with other groups, but ***_the work you submit must be your own._**
+
+*In this assignment, you will perform exploratory data analysis and summarize a dataset. You may include any number of appendices showing your work.*
+
+You are concerned about global health epidemics, and want to check which factors may be related to tuberculosis. Navigate to https://www.who.int/tb/country/data/download/en/ and review the various data sets; you will need to pick one pair of variables that you'd like to test for correlation. These variables may be from any datasets.
+
+**For your one report**, include the following sections:
+
+1. Data: Provide a quick summary of your dataset - this should be different from information provided in the pair assignment. Ensure that you explain why the variables selected would work for correlation. Clearly list any exclusions or transformations.
+2. Planning: Identify the variables that you will correlate and check assumptions of the test(s) that you wish to carry out. Be explicit about what test(s) you pick and why.
+3. Analysis: Calculate correlation between your variables, graph it, interpret it, and write up the results. Use plots as appropriate.
+4. Conclusion: Using the APA style, write up a conclusion for your analysis and what it might mean. Use plots as appropriate.
+
+
+## Set working directory {.build}
+```{r}
+setwd("C:/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_718/718_Assignment/Individual Assignment 1")
+```
+## Check working directory {.build}
+```{r}
+getwd()
+```
+## Read the data file {.build}
+```{r}
+tbData <- read_csv("TB_burden_countries_2021-02-11.csv")
+file.exists("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 1\\TB_burden_countries_2021-02-11.csv")
+```
+
+## Tidy {.build}
+Now that we have our data, what are the variables? What are the observations? Is the data tidy?
+
+```{r echo=FALSE}
+tbData
+```
+
+## Tidy {.build}
+Let's describe the dataset.
+
+This is a dataset of `TB_burden_age_sex_2021-02-11(tbData)` TB burden with
+There are thirteen variables:
+Each variable has a column, and each observation on those variables has one row. So, the day is already tidy and no rearrangements need to be done.
+
+```{r}
+tbData_2 <- select(tbData, country, year, e_pop_num, e_inc_100k)
+tbData_3 <- filter(tbData_2, year == "2019")
+tbData_4 <- select(tbData_3, e_pop_num, e_inc_100k)
+summary(tbData_4)
+```
+
+## Clean {.build}
+The data is in the right format, but we want to make sure that each variable is well represented.
+Let's start investigating them.
+
+`e_pop_num` (Estimated total population number), e_inc_100k(Estimated incidence (all forms) per 100 000 population) are numerical values, currently stored as a double. We want this to be an integer value, so let's try re-loading the dataset explicitly parsing those values as an integer.
+
+#Convert Data type
+```{r}
+tbData_4$e_pop_num=as.integer(tbData_3$e_pop_num)
+tbData_4$e_inc_100k=as.integer(tbData_3$e_inc_100k)
+```
+
+## Clean {.build}
+
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_pop_num:
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_inc_100k:
+
+```{r}
+tbData_4 %>%
+  summarize(missing_e_pop_num = sum(is.na(e_pop_num)))
+```
+```{r}
+tbData_4 %>%
+  summarize(missing_e_inc_100k = sum(is.na(e_inc_100k)))
+```
+
+## Omit the NAs in tbData_3 :: tbData_4 <- na.omit(tbData_3)
+
+## Data Manipulation
+## Input data {.build}
+
+A first way to get information might be to look at the data structure:
+
+```{r}
+str(tbData_4)
+tbData_4
+```
+
+## Input data {.build}
+Or look at the data in summary:
+
+```{r}
+summary(tbData_4)
+```
+
+## Clean {.build}
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_pop_num:
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_inc_100k:
+
+```{r}
+tbData_4 %>%
+  select(starts_with("e_pop_num")) %>% 
+  summarise_all(~ sum(is.na(.))) # "~" defines a lambda function
+```
+```{r}
+tbData_4 %>%
+  select(starts_with("e_inc_100k")) %>% 
+  summarise_all(~ sum(is.na(.))) # "~" defines a lambda function
+```
+
+#Basic Scatterplot
+```{r}
+plot(tbData_4$e_pop_num,tbData_4$e_inc_100k,xlab = 'Estimated Total Population Number',ylab = 'Estimated incidence (all forms) per 100 000 population', col="blue")
+```
+
+#Outliers of Estimated incidence (all forms) per 100 000 population
+```{r}
+ggplot(tbData_4, aes(y=e_pop_num)) + 
+  geom_boxplot(outlier.colour = "red", outlier.shape = 8, outlier.size = 2)
+```
+
+#Arrange Estimated Total Population Number in desc order
+```{r}
+tbData_4 %>% 
+  arrange(desc(e_pop_num))
+```
+
+## Outliers {.build}
+```{r echo=FALSE}
+tbData_4 %>% 
+  ggplot(aes(e_pop_num, e_inc_100k)) + geom_boxplot()
+```
+
+## Outliers - Identifying and Removing it from the dataset
+```{r}
+tbData_4[which(tbData_4$e_pop_num %in% outliers),]
+tbData_4 <- tbData_4[-which(tbData_4$e_pop_num %in% outliers),]
+```
+
+#Outliers of Boxplot of Estimated incidence (all forms) per 100 000 population
+```{r}
+boxplot(tbData_4$e_pop_num, col="green")
+```
+
+#Scatterplot with regression line
+```{r}
+ggplot(tbData_4, aes(x=e_pop_num, y=e_inc_100k)) + 
+  geom_point() +
+    geom_smooth(method=lm) +
+      labs(title = "Scatterplot of TB (Dataset)",
+        x = "e_pop_num (Estimated Total Population Number)",
+        y = "e_inc_100k (Estimated incidence (all forms) per 100 000 population)")
+```      
+
+#histogram of Estimated Total Population Number
+hist(x = tbData_4$e_pop_num,
+     xlab = "e_pop_num",
+     main = "Distribution of Estimated Total Population Number"
+     )
+     
+#histogram of Estimated mortality of TB cases (all forms) per 100 000 population
+hist(x = tbData_4$e_inc_100k,
+     xlab = "e_inc_100k",
+     main = "Distribution of Estimated incidence (all forms) per 100 000 population"
+     )
+
+#Boxplot with colors
+```{r}
+ggplot(tbData_4, aes(x=e_pop_num, y=e_inc_100k, fill=e_pop_num)) +
+  geom_boxplot() + ggtitle("Box Plot of Distribution of Estimated incidence (all forms) per 100 000 population")
+```
+
+#Horizontal boxplot
+```{r}
+ggplot(tbData_4, aes(x=e_pop_num, y=e_inc_100k, fill=e_pop_num)) +
+  geom_boxplot() + coord_flip()
+```
+
+## Plot data {.build}
+```{r echo=FALSE}
+ggplot(tbData_4, aes(x=e_pop_num, y=e_inc_100k)) + geom_point() + geom_jitter()
+```
+
+## Check Assumptions
+
+## Visual Inspection of Normality
+
+We looked at two different graphs to see if our data was normal: histograms and Q-Q Plots
+
+```{r}
+tbData_4.nooutliers %>% 
+  ggplot(aes(x=e_inc_100k)) + theme(legend.position = "none") +
+    geom_histogram(aes(y=..density..)) + 
+    stat_function(fun=dnorm, args=list(mean=mean(tbData_4$e_inc_100k, na.rm=TRUE), sd=sd(tbData_4$e_inc_100k, na.rm=TRUE)))
+```
+
+## Visual Inspection of Normality
+
+We looked at two different graphs to see if our data was normal: histograms and Q-Q Plots
+```{r}
+tbData_4.nooutliers %>% 
+  ggplot(aes(sample=e_inc_100k)) + stat_qq() + geom_qq_line(aes(color="red")) + theme(legend.position = "none")
+```
+
+
+## Correlation in R {.build}
+
+```{r}
+tbData_4 %>% 
+  select(e_pop_num, e_inc_100k) %>% 
+  cor(use="complete.obs", method = "pearson")
+```
+
+## Testing correlation {.build}
+
+you can use `cor.test()` to test for correlation
+
+```{r}
+cor.test(tbData_4$e_inc_100k, tbData_4$e_pop_num)
+```
+
+## Assumptions of correlation {.build}
+
+```{r}
+tbData_4
+```
+
+**yes**, the variables of interest are all interval data
+
+## Visual inspection of the data normality using Q-Q plots (quantile-quantile plots). Q-Q plot draws the correlation between a given sample and the normal distribution.
+
+```{r}
+ggqqplot(tbData_4$e_inc_100k, ylab = "Estimated incidence (all forms) per 100 000 population")
+```
+
+```{r}
+ggqqplot(tbData_4$e_pop_num, ylab = "Estimated Total Population Number")
+```
+
+## Pearson’s R
+
+```{r}
+cor(tbData_4$e_inc_100k, tbData_4$e_pop_num, method = "pearson")
+```
+
+```{r}
+cor.test(tbData_4$e_inc_100k, tbData_4$e_pop_num, method = "pearson")
+```
+
+## Spearman's rho
+
+We can calculate Spearman's rho, a non-parametric correlation coefficient, that ranks the variables and then calculates the Pearson coefficient from both rankings
+
+```{r}
+cor.test(tbData_4$e_inc_100k, tbData_4$e_pop_num, method = "spearman")
+```
+
+## Scatterplot - Pearson's R
+```{r}
+ggscatter(tbData_4, x = "e_pop_num", y = "e_inc_100k", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "e_pop_num (Estimated Total Population Number)",
+          ylab = "e_inc_100k (Estimated incidence (all forms) per 100 000 population")
+```
+
+## Scatterplot - Spearman’s rho
+
+```{r}
+ggscatter(tbData_4, x = "e_pop_num", y = "e_inc_100k",
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "spearman",
+          xlab = "e_pop_num (Estimated Total Population Number)",
+          ylab = "e_inc_100k (Estimated incidence (all forms) per 100 000 population")
+```
+
+
+```{r}
+tbData_4 <-cor(tbData_4)
+corrplot(tbData_4, type="upper", order="hclust",
+         col=brewer.pal(n=8, name="RdYlBu"))
+```
