@@ -1,0 +1,562 @@
+---
+title: "Individual Assignment 5"
+author: "MSCI 718 - 20864394"
+date: April 23, 2021
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)        # to plot
+library(inspectdf)      # to inspect proportion of categorical variable
+library(GGally)         # to inspect correlation between variables
+library(caret)          # to perform cross-validation
+library(class)          # package for knn
+library(car)            # to inspect multicollinearity
+library(corrplot)       # Correlation
+library(RColorBrewer)   # Color
+```
+
+*Instructions: Complete this assignment individually and submit online to the LEARN Dropbox as a ***_PDF (max 2 pages)_***. Also upload any source files, for example, and any .R or .Rmd files that you used. If you discussed problems with other students, please describe the nature of that discussion (e.g., on Team, in a study group). Remember, you can discuss approaches to problems with other people, but ***_the work you submit must be your own._**
+
+*Learning Objectives: In this assignment, you will perform a logistic regression on the provided data set, or with permission, a data set proposed by you. You will estimate the coefficients and assess the accuracy of coefficient estimates. Finally, you will need to assess and describe the accuracy of your model. *
+
+
+**For your report**, include the following sections:
+
+ 1. Problem statement and data used: You are training to become a sommelier. You'd like to really understand the difference between white and red wine. Of course, being a data analyst, your tool of choice is a regression model. Use logistic regression to predict whether a wine is red or white based on one or more other features in this data set: https://archive.ics.uci.edu/ml/datasets/Wine+Quality
+ 2. Planning: Plan your analysis based on the problem statement. Include data wrangling, assumption tests, and any other analyses you may need to conduct.
+ 3. Analysis: Conduct an appropriate regression, along with any appropriate assumption and accuracy checks.
+ 4. Conclusion: Write up your analyses in a report to your manager and explain your conclusions.
+
+
+ **Grading Criteria**
+
+ You will be graded against the same rubric that was used for pair assignments 1 and 2. We will be looking for a number of things:
+  
+ 1. Process and clarity of thought: Did you clearly apply a step by step process? Why did you chose the steps you did? Did you miss out on anything? Some examples would be ensuring you wrangled your data appropriately, checked the data against any assumptions required for the analysis, and did not do any work that was not required for this specific test.
+ 2. Presentation: Use bullets, subtitles, and the APA style for your report. Use simple language, do not use complicated words unless they help you describe a complex idea. Use graphs judiciously. Show your work - if you do not include something in the main report, the teaching staff will not grade it.
+
+
+## Set working directory {.build}
+```{r , echo = TRUE, warning=TRUE}
+setwd("C:/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_718/718_Assignment/Individual Assignment 5/IA5_v2")
+```
+
+## Check working directory {.build}
+```{r , echo = TRUE, warning=TRUE}
+getwd()
+```
+
+## Read the data file {.build}
+```{r , echo = TRUE, warning=TRUE}
+library(readr)
+red <- read_delim("winequality-red.csv",
+                         delim = ";", 
+                         locale = locale(decimal_mark = ".", grouping_mark = ","), 
+                         col_names = TRUE)
+
+white <- read_delim("winequality-white.csv",
+                         delim = ";", 
+                         locale = locale(decimal_mark = ".", grouping_mark = ","), 
+                         col_names = TRUE)
+
+# Set column names
+cnames <- c("fixed_acidity", "volatile_acidity", "citric_acid",
+            "residual_sugar", "chlorides", "free_sulfur_dioxide",
+            "total_sulfur_dioxide", "density", "pH",
+            "sulphates", "alcohol", "quality")
+
+# Columns used for prediction are all columns except 'quality'
+xcol <- c("fixed_acidity", "volatile_acidity", "citric_acid",
+          "residual_sugar", "chlorides", "free_sulfur_dioxide",
+          "total_sulfur_dioxide", "density", "pH",
+          "sulphates", "alcohol")
+
+colnames(red)   <- cnames
+colnames(white) <- cnames
+
+# Adding the column 'type' to define the type of wines
+red <- mutate(red,   type = "red")
+white <- mutate(white, type = "white")
+
+# Joining the wine type 'red' and 'white' datasets
+data <- rbind(red, white)
+data <- mutate(data, 
+               quality = as.factor(quality),
+               type = as.factor(type))
+
+data <- data %>% 
+  select(-quality)
+
+```
+
+## Read the data file from the directory {.build}
+```{r , echo = TRUE, warning=TRUE}
+#data <- read.csv(paste("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 5\\IA5_v2\\wine_dataset.csv"))
+
+#file.exists("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 5\\IA5_v2\\wine_dataset.csv")
+
+```
+
+## Problem Statement
+There is a training going on to become a sommelier and would like to really understand the difference between white and red wine based on the given data set.
+
+## Data
+The dataset used in this analysis is retrieved from this site: https://archive.ics.uci.edu/ml/datasets/Wine+Quality. Two datasets are related to red and white variants of the Portuguese “Vinho Verde” wine. Details can be found at: http://www.vinhoverde.pt/en/ or the reference [Cortez et al., 2009]. The dataset includes 13 variables and 6497 observations, which contains 1599 red wines and 4898 white wines. 12 input variables are the chemical properties of the wine.
+
+## Planning 
+In this assignment, I will compare the difference between red and white wines in terms of chemical properties by studying the plots of each variable and then analyse the relationship between each chemical property. Most importantly, I will create a logistic regression model to predict the type of the wine.
+
+
+## Summary of the Data Set
+```{r , echo = TRUE, warning=TRUE}
+head(data)
+tail(data)
+dim(data)
+names(data)
+summary(data)
+str(data)
+```
+
+# check for missing value
+We have 38 missing values. We are going to delete these missing values.
+```{r , echo = TRUE, warning=TRUE}
+sum(is.na(data))
+data<-na.omit(data)
+sum(is.na(data))
+```
+
+# correlation between variables
+I wanted to make a model to predict wine type only. Therefore, I subsetted the wine data and removed quality for easier data analysis.
+
+```{r , echo = TRUE, warning=TRUE}
+# subsetting data
+#data$quality <- NULL
+
+# check for missing value
+anyNA(data)
+summary(data)
+dim(data)
+```
+
+# correlation between variables
+```{r , echo = TRUE, warning=TRUE}
+#data <- mutate(data, type = as.numeric(type))
+
+M <-cor(data[,-1])
+corrplot(M, type="upper", order="hclust",
+         col=brewer.pal(n=8, name="RdYlBu"))
+
+corrplot(M, method = "square")
+```
+
+# Correlation between variables
+```{r , echo = TRUE, warning=TRUE}
+require(corrgram)
+
+# Draw a correlogram
+corrgram(data[,xcol], order=TRUE, 
+         lower.panel = panel.shade, 
+         upper.panel = panel.cor, 
+         text.panel  = panel.txt,
+         main = "Correlogram: Red and White Wine: Chemical Properties",
+         col.regions=colorRampPalette(c("darkgoldenrod4", "burlywood1",
+                                        "darkkhaki", "darkgreen")))
+
+```
+The correlations of volatile acid, chlorides and total sulfur dioxide are low.
+Feature	            Volatile_acidity	    Chlorides	    Total_sulfur_dioxide
+Volatile_acidity	        1.000	            0.378	            -0.416
+Chlorides	                0.378	            1.000	            -0.276
+Total_sulfur_dioxide	   -0.416	           -0.276	             1.000
+
+
+# Identify independent variables for further analysis
+```{r , echo = TRUE, warning=TRUE}
+ind_variables<-names(data)[which(sapply(data, is.numeric))]
+cat("The independent variables are:",ind_variables)
+
+```
+
+# Correlation Between Objective Parameters - Density vs. Alcohol correlation by type
+```{r , echo = TRUE, warning=TRUE}
+ggplot(data = data,
+       aes(x = density, y = alcohol, color = type)) +
+   geom_point(alpha = 1/6, position = position_jitter(h = 0), size = 3) +
+   geom_smooth(method = 'lm') +
+   coord_cartesian(xlim=c(min(data$density),1.005), ylim=c(8,15)) +
+   xlab('Density') +
+   ylab('Alcohol') +
+   ggtitle('Density vs. Alcohol correlation by type')
+
+```
+
+# Correlation
+Density seems to be strongly correlated to Alcohol percent and Residual Sugar, Total Sulfur Dioxide is also strongly corelated to several others, we can leave these out or include them in the analysis.
+
+```{r , echo = TRUE, warning=TRUE}
+simple_cor_test <- function(x, y) {
+  return(cor.test(x, as.numeric(y))$estimate)
+}
+
+correlations <- c(
+  simple_cor_test(data$fixed_acidity, data$type),
+  simple_cor_test(log(data$volatile_acidity), data$type),
+  simple_cor_test(data$citric_acid, data$type),
+  simple_cor_test(log(data$residual_sugar), data$type),
+  simple_cor_test(log(data$chlorides), data$type),
+  simple_cor_test(data$free_sulfur_dioxide, data$type),
+  simple_cor_test(log(data$total_sulfur_dioxide), data$type),
+  simple_cor_test(data$density, data$type),
+  simple_cor_test(data$pH, data$type),
+  simple_cor_test(log(data$sulphates), data$type),
+  simple_cor_test(data$alcohol, data$type))
+names(correlations) <- c('fixed_acidity', 'log_volatile_acidity', 'citric_acid',
+                         'log_residual_sugar', 'log_chlordies', 'free_sulfur_dioxide',
+                         'log_total_sulfur_dioxide', 'density', 'pH',
+                         'log_sulphates', 'alcohol')
+correlations
+```
+
+
+I checked correlation between all the variables in wine data set. We can see some correlation in pairs like:
+
+* alcohol vs. density
+* fixed_acidity vs. density
+* residual_sugar vs. density
+* chlorides vs. density
+* chlorides vs. sulphates
+
+After checking correlated pairs I noticed that red wine and white wine behave different in some graphs. Means for red and white wine correlation can be significantly different.
+                                                RED      |     WHITE
+* alcohol vs. density                    :    strong c.  :   strong c.
+* fixed_acidity vs. density              :    strong c.  :     no c.
+* residual_sugar vs total_sulfur_dioxide :     weak      :    weak c.
+* residual_sugar vs. density             :    strong c.  :   strong c. 
+* residual_sugar vs. alcohol             :     no c.     :   strong c.
+* chlorides vs. density                  :    strong c.  :   strong c.
+* chlorides vs. sulphates                :    strong c.  :     no c.
+
+## Level of Alcohol
+Alcohol level distribution looks skewed. Again, red wine sample is smaller but it gives the same pattern of alcohol level distribution as while wines. Most frequently wines have 9.5%, mean is 10.49% of alcohol.
+
+```{r , echo = TRUE, warning=TRUE}
+summary(data$alcohol)
+
+qplot(alcohol, data = data, fill = type, binwidth = 0.5) +
+    scale_x_continuous(breaks = seq(8,15,0.5), lim = c(8,15))
+```
+
+## Density of wine
+Looking at ‘table’ summary we see that there are two outliers: 1.0103 and 1.03898. To see the distribution of density clearer I used log10 and limited the data. Now we can see that density distribution of wine is bimodal.
+
+```{r , echo = TRUE, warning=TRUE}
+summary(data$density)
+
+qplot(density, data = data, fill = type, binwidth = 0.0002) +
+    scale_x_log10(lim = c(min(data$density), 1.00370), 
+                  breaks = seq(min(data$density), 1.00370, 0.002))
+```
+
+## Level of Volatile Acidity
+Volatile acidity has normal distribution. I also suppose that more acetic wines have worse marks because high acidity can lead to unpleasant taste.
+
+```{r , echo = TRUE, warning=TRUE}
+summary(data$volatile_acidity)
+
+qplot(volatile_acidity, data = data, fill = type, binwidth = 0.001) +
+    scale_x_log10(breaks = seq(min(data$volatile_acidity), 
+                               max(data$volatile_acidity), 0.1))
+
+```
+
+# density vs. fixed_acidity plot
+```{r , echo = TRUE, warning=TRUE}
+p <- f(data, "density", "fixed_acidity", "type")
+p + coord_cartesian(xlim=c(min(data$density),1.005))
+```
+
+# residual_sugar vs. total_sulfur_dioxide
+```{r , echo = TRUE, warning=TRUE}
+p <- f(data, "residual_sugar", "total_sulfur_dioxide", "type")
+p + scale_x_log10() +
+    coord_cartesian(xlim=c(min(data$residual_sugar),30), 
+                    ylim=c(min(data$total_sulfur_dioxide), 350))
+```
+
+## residual_sugar vs. density
+```{r , echo = TRUE, warning=TRUE}
+p <- f(data, "residual_sugar", "density", "type")
+p + coord_cartesian(xlim=c(min(data$residual_sugar),25), 
+                    ylim=c(min(data$density), 1.005))
+```
+
+# residual_sugar vs. alcohol
+```{r , echo = TRUE, warning=TRUE}
+p <- f(data, "residual_sugar", "alcohol", "type")
+p + coord_cartesian(xlim=c(min(data$residual_sugar),25), 
+                    ylim=c(min(data$alcohol), 15))
+```
+
+# chlorides vs. density
+```{r , echo = TRUE, warning=TRUE}
+p <- f(data, "chlorides", "density", "type")
+p + scale_x_log10() +
+    coord_cartesian(ylim=c(min(data$density), 1.005))
+```
+
+# chlorides vs. sulphates
+```{r , echo = TRUE, warning=TRUE}
+p <- f(data, "chlorides", "sulphates", "type")
+p + scale_x_log10() +
+    coord_cartesian(ylim=c(min(data$sulphates), 1))
+```
+
+# Boxplot of the different variables in wine data set
+```{r , echo = TRUE, warning=TRUE}
+qplot(x = type, y = fixed_acidity, data = data, geom = "boxplot")
+qplot(x = type, y = volatile_acidity, data = data, geom = "boxplot")
+qplot(x = type, y = citric_acid, data = data, geom = "boxplot")
+qplot(x = type, y = residual_sugar, data = data, geom = "boxplot")
+qplot(x = type, y = chlorides, data = data, geom = "boxplot")
+qplot(x = type, y = free_sulfur_dioxide, data = data, geom = "boxplot")
+qplot(x = type, y = total_sulfur_dioxide, data = data, geom = "boxplot")
+qplot(x = type, y = density, data = data, geom = "boxplot")
+qplot(x = type, y = pH, data = data, geom = "boxplot")
+qplot(x = type, y = sulphates, data = data, geom = "boxplot")
+qplot(x = type, y = alcohol, data = data, geom = "boxplot")
+
+```
+
+Analyzing the data we can come up the following conclusion:
+_ When alcohol percentage decreases, density grows.
+_ In general alcohol level of red wine is higher than alcohol level of white wine.
+_ When fixed acidity increases density of red wine increases as well. White wine almost doesn’t show any correlation.
+_ Total sulfur dioxide and level of residual sugar are positively correlated. Correlation shows higher value with white wine.
+_ White wine density and residual sugar level have positive correlation.
+_ Alcohol level of white wine decreases with the growth of residual sugar level.
+_ Wine with high alcohol percentage has quality level 7, wine with less alcohol percentage is quality level 5.
+_ Mostly frequent quality levels of red and white wine are 5 and 6.
+
+According to my investigation I can conclude that experts’ decisions on wine quality levels are based on their personal testes or could depend on other variables like year of production, grape types, wine brand etc. as only one variable (alcohol level) has correlation with quality of wine.
+
+
+## Preparation of the data for logistic regression
+```{r , echo = TRUE, warning=TRUE}
+#Normalization
+#type<-data$type
+#data <- as.data.frame(lapply(data[,c(1:12)], nor))
+#data <- cbind(data,type)
+#data$type<-as.factor(data$type)
+
+#set.seed(100)
+#train <- sample(nrow(data), nrow(data)*0.8) # making condition to sample 80% of data
+#data.train <- data[train,] # consist of 80% of data
+#data.test <- data[-train,] # consist of the remaining 20% data
+
+```
+
+## Building Logistic Regression Model
+I made logistic regression with automatic feature selection using backward elimination. I picked model which has the lowest AIC. AIC estimates the relative amount of information lost by a given model. The less information a model loses, the higher the quality of that model. On picking the variables for backward elimination, I also inspected the correlation between each variables. It is important that each variables is not correlated with one another, because it is one of the assumption when making logistic regression.
+
+Based on matrix, there are correlation between alcohol and density, chlorides and sulphates, free.sulfur.dioxide and total.sulfur.dioxide. Therefore, I picked only one of them for the model building.
+
+```{r , echo = TRUE, warning=TRUE}
+model <- glm(formula = type ~ volatile_acidity + 
+               total_sulfur_dioxide + chlorides, data = data, family = "binomial")
+
+m1 <- log(data$total_sulfur_dioxide) * data$total_sulfur_dioxide
+m2 <- log(data$volatile_acidity) * data$volatile_acidity
+m3 <- log(data$chlorides) * data$chlorides
+
+data <- mutate(data, log_total_sulfur_dioxide = m1, log_volatile_acidity = m2, log_chlorides = m3)
+
+model2 <- glm(formula = type ~ total_sulfur_dioxide + volatile_acidity + chlorides + log_total_sulfur_dioxide +
+               log_volatile_acidity + log_chlorides, data = data, family = "binomial")
+
+summary(model)
+summary(model2)
+
+modelPred <- data.frame(predict(model, newdata = data))
+modelPred <- data.frame(predict(model2, newdata = data))
+
+step(model, direction = "backward")
+step(model2, direction = "backward")
+
+#ggcorr(data[,-13], hjust=1, layout.exp = 1, label = T, label_size = 2.9)
+
+```
+
+## Assumptions of logistic regression {.build}
+logistic regression shares three assumptions from linear regression, some with slight adjustments
+
+1. **linearity**: linear relationship between continuous predictors and the logit of the outcome variable
+2. **independence of errors**: same as linear regression
+3. **multicollinearity**: same as linear regression
+
+Plus, there are some unique problems of its own:
+1. **incomplete information**: need full combinations of variables
+2. **complete separation**: logistic regression fails if your data does not overlap
+
+
+## Durbin-Watson Test - (independence of errors)
+From the output of Durbin-Watson test it is clear that that the the model do not meet the assumption of (independent errors) as the p value = 2.2e-16 is less than alpha value (0.05) value and DW test statistic is close to 2 (DW = 1.1599) for the Model.
+
+```{r , echo = TRUE, warning=TRUE}
+library(lmtest)
+dwtest(model)
+dwtest(model2)
+
+```
+
+## Multicollinearity
+Multicollinearity is an important issue in regression analysis and should be fixed by removing the concerned variables. It can be assessed using the R function vif() [car package], which computes the variance inflation factors:
+
+As a rule of thumb, a VIF value that exceeds 5 or 10 indicates a problematic amount of collinearity. In our example, there is no collinearity: all variables have a value of VIF well below 5.
+
+* Multicollinearity can be verified through VIF Factor. The largest VIFs are 1.35 and .120 which are less than 10; the average vifs are 1.35 and 1.20, close to 1. The lowest tolerances (1/VIF) are 0.73 and 0.82. Thus, we can say there is no collinearity in our data.
+
+```{r , echo = TRUE, warning=TRUE}
+car::vif(model) # check for multicollinearity
+vif(step) # check for multicollinearity
+1/vif(model)
+mean(vif(model))
+max(vif(model))
+min(1/vif(model))
+
+```
+
+## Outliers/ Influential point detection
+Influential values are extreme individual data points that can alter the quality of the logistic regression model. The most extreme values in the data can be examined by visualizing the Cook’s distance values. Here we label the top 3 largest values:
+
+Note that, not all outliers are influential observations. To check whether the data contains potential influential observations, the standardized residual error can be inspected. Data points with an absolute standardized residuals above 3 represent possible outliers and may deserve closer attention.
+
+```{r , echo = TRUE, warning=TRUE}
+par(mfrow=c(2,2))  # Change the panel layout to 2 x 2
+lapply(c(1,2,4,5), # showing 4 types of plots
+       function(x) plot(model, 
+                        which = x, 
+                        #labels.id = 1:nrow(X.data),
+                        cook.levels = c(0.05, 0.1))) %>%
+                    invisible()
+
+
+library(broom)
+# Extract model results
+model_data <- augment(model) %>% 
+  mutate(index = 1:n())
+
+#The data for the top 3 largest values, according to the Cook’s distance, can be displayed as follow:
+model_data %>%
+  top_n(3, .cooksd)
+
+#Plot the Standardized Residuals
+ggplot(model_data, aes(index, .std.resid)) + 
+  geom_point(aes(color = type), alpha = .5) +
+  theme_bw()
+
+```
+
+## Logistic Regression - Coefficient
+We can interpret our model based on its coefficient. The coefficient in logistic regression stand for log-of-odds ratio. We can get the odds ratio of for each variables by using exp(coef()).
+
+In logistic regression, each exponentiated coefficient (exp(coeff)) or in the table as odds_ratio is the change of odds in multiplicative scale for a one-unit increase in the corresponding predictor variable, holding other variables constant.
+
+From the table, we can also see that positive coefficient gave > 1 odds_ratio, while negative coefficient gave < 1 odds_ratio. These results explain:
+** positive coefficient describes a positive correlation between a predictor variable and the odds of our target variable.
+** negative coefficient describes negative correlation between a predictor variable and the odds of our target variable.
+
+We can summarize that an increase in pH will increase the odds of having a white wine classified as excellent quality, while other variables will decrease the odds.
+
+
+```{r , echo = TRUE, warning=TRUE}
+step <- glm(formula = type ~ volatile_acidity + 
+               total_sulfur_dioxide + chlorides, data = data, family = "binomial")
+
+step1 <- glm(formula = type ~ total_sulfur_dioxide + volatile_acidity + chlorides + log_total_sulfur_dioxide +
+               log_volatile_acidity + log_chlorides, data = data, family = "binomial")
+
+
+data.frame(coefficient = round(coef(step),4),
+           odds_ratio = round(exp(coef(step)),4))
+
+data.frame(coefficient = round(coef(step1),4),
+           odds_ratio = round(exp(coef(step1)),4))
+
+```
+
+## Interpreting logistic regression {.build}
+```{r , echo = TRUE, warning=TRUE}
+library(caret)
+# The confidence intervals given are just the $\beta$ estimates
+confint(model)
+
+# So, we need to transform them into odds ratios
+exp(confint(model))
+
+# Predict the model with testing data set
+predict(model, newdata=data)
+predict(model, newdata=data, type="terms")
+
+```
+
+## Logistic Regression - Accuracy and F1-score
+```{r , echo = TRUE, warning=TRUE}
+#model3 <- glm(formula = type ~ fixed_acidity + volatile_acidity + citric_acid + residual_sugar + chlorides + free_sulfur_dioxide +
+              #total_sulfur_dioxide + density + pH + sulphates + alcohol, data = data, family = "binomial")
+
+model <- glm(formula = type ~ volatile_acidity + 
+               total_sulfur_dioxide + chlorides, data = data, family = "binomial")
+
+predictions_prob = predict(model, data, type='response')
+#predictions_prob = predict(model2, data, type='response')
+head(predictions_prob)
+
+pred=numeric(nrow(data))
+pred[predictions_prob>0.5]=1
+pred[predictions_prob<=0.5]=0
+tab=table(as.numeric(data$type),as.numeric(pred))
+
+nor <-function(x) {(x -min(x))/(max(x)-min(x))}                 #Normalization function
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}   #Accuracy function
+precision <- function(x){x[2,2]/(x[2,2]+x[1,2])}                #Precision function
+recall <- function(x){x[2,2]/(x[2,2]+x[2,1])}                   #Recall function
+f1_score <- function(x){(2*precision(x)*recall(x)) / sum(precision(x), recall(x))*100}  
+
+accurate.logistic<-accuracy(tab)
+precision.logistic<-precision(tab)
+recall.logistic<-recall(tab)
+f1.logistic<-f1_score(tab)
+c('Accuracy : ',accurate.logistic,' and F1-score : ',f1.logistic)
+
+
+# Predict
+pred_m <- predict(model3, newdata = data)
+
+# Convert the predicted value to factor
+f_pred_m <- factor(ifelse(pred_lm > 0.5, "red", "white"))
+
+# Evaluate the results
+library(e1071)
+caret::confusionMatrix(data = f_pred_m, data$type)
+
+```
+
+## Receiver Operating Characteristics (ROC) and Area Under Curve (AUC)
+```{r , echo = TRUE, warning=TRUE}
+library(ROCR)
+library(pROC) # ROC curves
+ROC_rf <- roc(data$type, as.numeric(f_pred_m))
+head(ROC_rf)
+
+# Area Under Curve (AUC) for each ROC curve (higher -> better)
+ROC_rf_auc <- auc(ROC_rf)
+plot(ROC_rf, col = "Blue", main = "ROC For Logistic Regression (Blue)")
+
+# AUC - Accuracy
+auc_ROCR <- auc(ROC_rf)
+auc_ROCR
+
+```
