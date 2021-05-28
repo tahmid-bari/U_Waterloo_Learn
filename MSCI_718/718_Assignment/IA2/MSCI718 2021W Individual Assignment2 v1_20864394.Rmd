@@ -1,0 +1,228 @@
+---
+title: "Individual Assignment 2"
+author: "MSCI 718"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("csv")
+#install.packages("xlsx")
+#install.packages("pastecs")
+#install.packages("rcompanion")
+#install.packages("ggpubr")
+#install.packages("outliers")
+#install.packages("boot")
+library(rlang)
+library(dplyr)
+library(ggplot2)
+library(readxl)     # Read excel
+library(readr)      # Read csv
+library(tidyverse)
+library(knitr)      # For knitting document and include_graphics function
+library(gridExtra)  # For including grids of plots
+library(boot)
+library(ggpubr)     # For correlations test
+library(outliers)   # For outlier treatment
+library(pastecs)
+```
+
+*Instructions: Complete this assignment individually and submit online to the LEARN Dropbox as a ***_PDF (max 2 pages)_***. Also upload any source files, for example, and any .R or .Rmd files that you used. If you discussed problems with other students, please describe the nature of that discussion (e.g., on Team, in a study group). Remember, you can discuss approaches to problems with other people, but ***_the work you submit must be your own._**
+
+*Learning Objectives: In this assignment, you will perform partial correlation or bootstrapped correlation on the dataset you wrangled in Pair Assignment 2. You will then test assumptions and conduct your correlation analysis. You can change your variables and do some exploratory data analysis, but we don't expect you to describe much of a difference in the data input/wrangling step unless it is substantial. We will be looking at how you think about assumptions, conduct correlation analysis, and follow-up with conclusions and takeaways. *
+
+**Your assignment:** Choose two or more variables from the dataset you wrangled in Pair Assignment 2, and analyze them using partial correlation (i.e., controlling for additional variables) or bootstrapped correlation (ideally with some rational for choosing bootstrapping). This can be a more involved analysis of the variables you analyzed in Individual Assignment 1, or new variables.
+
+
+**For your one report**, include the following sections:
+
+ 1. Data: Provide a quick summary of your dataset - this should be different from information provided in the pair assignment. Ensure that you explain why the variables selected would work for correlation. Clearly list any exclusions or transformations.
+ 2. Planning: Identify the variables that you will correlate and check assumptions of the test(s) that you wish to carry out. Be explicit about what test(s) you pick and why.
+ 3. Analysis: Calculate correlation between your variables, graph it, interpret it, and write up the results. Use plots as appropriate. 
+ 4. Conclusion: Using the [APA style](https://owl.purdue.edu/owl/research_and_citation/using_research/writing_with_statistics/index.html), write up a conclusion for your analysis and what it might mean. Use plots as appropriate.
+
+
+## Set working directory {.build}
+```{r}
+setwd("C:/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_718/718_Assignment/Individual Assignment 2")
+```
+
+## Check working directory {.build}
+```{r}
+getwd()
+```
+
+## Read the data file {.build}
+```{r}
+tbData <- read_csv("TB_burden_countries_2021-02-11.csv")
+file.exists("C:\\Users\\Tahmid Bari\\Desktop\\UWaterloo\\Study\\MSCI_718\\718_Assignment\\Individual Assignment 2\\TB_burden_countries_2021-02-11.csv")
+```
+
+## Tidy {.build}
+Now that we have our data, what are the variables? What are the observations? Is the data tidy?
+
+```{r echo=FALSE}
+tbData
+```
+
+## Tidy {.build}
+Let's describe the dataset.
+
+This is a dataset of `TB_burden_age_sex_2021-02-11(tbData)` TB burden with
+There are thirteen variables:
+Each variable has a column, and each observation on those variables has one row. So, the day is already tidy and no rearrangements need to be done.
+
+```{r}
+tbData_2 <- select(tbData, country, year, e_pop_num, e_inc_100k)
+tbData_3 <- filter(tbData_2, year == "2019")
+tbData_4 <- select(tbData_3, e_pop_num, e_inc_100k)
+summary(tbData_4)
+```
+
+## Clean {.build}
+The data is in the right format, but we want to make sure that each variable is well represented.
+Let's start investigating them.
+
+`e_pop_num` (Estimated total population number), e_inc_100k(Estimated incidence (all forms) per 100 000 population) are numerical values, currently stored as a double. We want this to be an integer value, so let's try re-loading the dataset explicitly parsing those values as an integer.
+
+#Convert Data type
+```{r}
+tbData_4$e_pop_num=as.integer(tbData_3$e_pop_num)
+tbData_4$e_inc_100k=as.integer(tbData_3$e_inc_100k)
+```
+
+## Clean {.build}
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_pop_num:
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_inc_100k:
+
+```{r}
+tbData_4 %>%
+  summarize(missing_e_pop_num = sum(is.na(e_pop_num)))
+```
+```{r}
+tbData_4 %>%
+  summarize(missing_e_inc_100k = sum(is.na(e_inc_100k)))
+```
+
+## Omit the NAs in tbData_3 :: tbData_4 <- na.omit(tbData_3)
+
+## Data Manipulation
+## Input data {.build}
+
+A first way to get information might be to look at the data structure:
+
+```{r}
+str(tbData_4)
+tbData_4
+```
+
+## Input data {.build}
+Or look at the data in summary:
+
+```{r}
+summary(tbData_4)
+```
+
+## Clean {.build}
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_pop_num:
+`col_integer()` will return `NA` if it fails to parse an integer, so let's make sure there are no missing values for e_inc_100k:
+
+```{r}
+tbData_4 %>%
+  select(starts_with("e_pop_num")) %>% 
+  summarise_all(~ sum(is.na(.))) # "~" defines a lambda function
+```
+
+```{r}
+tbData_4 %>%
+  select(starts_with("e_inc_100k")) %>% 
+  summarise_all(~ sum(is.na(.))) # "~" defines a lambda function
+```
+
+#Basic Scatterplot
+```{r}
+plot(tbData_4$e_pop_num,tbData_4$e_inc_100k,xlab = 'Estimated Total Population Number',ylab = 'Estimated incidence (all forms) per 100 000 population', col="blue")
+```
+
+#Outliers of Estimated incidence (all forms) per 100 000 population
+```{r}
+ggplot(tbData_4, aes(y=e_pop_num)) + 
+  geom_boxplot(outlier.colour = "red", outlier.shape = 8, outlier.size = 2)
+```
+
+## Outliers - Identifying and Removing it from the dataset
+```{r}
+tbData_4[which(tbData_4$e_pop_num %in% outliers),]
+tbData_4 <- tbData_4[-which(tbData_4$e_pop_num %in% outliers),]
+```
+
+#Outliers of Boxplot of Estimated incidence (all forms) per 100 000 population
+```{r}
+boxplot(tbData_4$e_pop_num, col="green")
+```
+
+#Function for Kendall Tau
+```{r}
+bootTau<-function(tbData_4,i)cor(tbData_4$e_pop_num[i], tbData_4$e_inc_100k[i], use = "complete.obs", method = "kendall")
+```
+
+#Bootstrapping using Kendall
+```{r}
+boot_kendall<-boot(tbData_4, bootTau, 2000)
+boot_kendall
+```
+
+#Confidence interval of kendall bootstrap
+
+```{r}
+boot.ci(boot_kendall)
+```
+
+#Plot of Bootstrapping using kendall
+```{r}
+plot(boot_kendall, index=1)
+```
+
+#Function for Spearman's rho
+```{r}
+bootSpearman<-function(tbData_4,i)cor(tbData_4$e_pop_num[i], tbData_4$e_inc_100k[i], use = "complete.obs", method = "spearman")
+```
+
+#Bootstrapping using Spearman's rho
+```{r}
+boot_spearman<-boot(tbData_4, bootPearson, 2000)
+boot_spearman
+```
+
+#Confidence interval of Spearman's rho bootstrap
+```{r}
+boot.ci(boot_spearman)
+```
+
+#Plot of Bootstrapping using Spearman's rho
+```{r}
+plot(boot_spearman, index=1)
+```
+
+#Function for Pearson's R
+```{r}
+bootPearson<-function(tbData_4,i)cor(tbData_4$e_pop_num[i], tbData_4$e_inc_100k[i], use = "complete.obs", method = "pearson")
+```
+
+#Bootstrapping using Pearson's R
+```{r}
+boot_pearsons<-boot(tbData_4, bootPearson, 2000)
+boot_pearsons
+```
+
+#Confidence interval of Pearson's R bootstrap
+```{r}
+boot.ci(boot_pearsons)
+```
+
+#Plot of Bootstrapping using Pearson's R
+```{r}
+plot(boot_pearsons, index=1)
+```
+
+#Help(plot.boot)
