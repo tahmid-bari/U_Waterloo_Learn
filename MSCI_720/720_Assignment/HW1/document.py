@@ -1,4 +1,4 @@
-class Document: 
+class Document:
     """Data wrapper object that contains raw document and metadata"""
 
     def __init__(self):
