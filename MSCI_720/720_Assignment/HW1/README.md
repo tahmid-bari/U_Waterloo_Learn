@@ -3,7 +3,7 @@ Author: Tahmid Bari
 Student ID: 20864394
 
 How to run:
-- Ensure you have Python3 installed on your machine
+- Ensure you have Python3 (version 3.7) installed on your machine
 - Download the latimes.gz dataset used for this assignment
 - Parameters can be passed into the indexEngine.py or getDoc.py methods using: python (indexEngine.py| getDoc.py) A B
   where A and B are separate parameters
