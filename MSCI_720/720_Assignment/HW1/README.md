@@ -1,5 +1,6 @@
 MSCI 720 Assignment 1 Files
-Author: Tahmid Bari 20864394
+Author: Tahmid Bari
+Student ID: 20864394
 
 How to run:
 - Ensure you have Python3 installed on your machine
