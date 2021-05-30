@@ -19,20 +19,20 @@ getDoc.py: error: the following arguments are required: DOCUMENT_DIRECTORY, DOC_
 # Test indexEngine directory already exists:
 
 Input:
-python indexEngine.py ~/MSCI_720/latimes.gz  ~/MSCI_720/documents
+python indexEngine.py ~/MSCI_720/720_Assignments/720_HW1/latimes.gz  ~/MSCI_720/720_Assignments/720_HW1
 
 Output:
 Traceback (most recent call last):
   File "indexEngine.py", line 39, in <module>
     os.makedirs(directory_path, exist_ok=False)
-  File "/Users/Tahmid Bari/MSCI_720/venv/bin/../lib/python3.4/os.py", line 237, in makedirs
+  File "/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_720/720_Assignments/720_HW1/venv/bin/../lib/python3.4/os.py", line 237, in makedirs
     mkdir(name, mode)
-FileExistsError: [Errno 17] File exists: '/Users/Tahmid Bari/MSCI_720/documents'
+FileExistsError: [Errno 17] File exists: '/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_720/720_Assignments/720_HW1'
 
 # Test indexEngine with no directory existing:
 
 Input:
-python indexEngine.py ~/MSCI_720/latimes.gz  ~/MSCI_720/documents
+python indexEngine.py ~/MSCI_720/720_Assignments/720_HW1/latimes.gz  ~/MSCI_720/720_Assignments/720_HW1
 
 Output:
 
@@ -53,7 +53,7 @@ Processed Document: 131896
 # Test getDoc by docno
 
 Input:
-python getDoc.py ~/MSCI_720/documents docno LA010189-0018
+python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 docno LA010189-0018
 
 Output:
 docno: LA010189-0018
@@ -118,7 +118,7 @@ Column
 
 # Test getDoc by id
 Input:
-python getDoc.py ~/MSCI_720/documents id 18
+python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 id 18
 docno: LA010189-0018
 internal id: 76235
 date: January 1, 1989
@@ -181,7 +181,7 @@ Column
 
 # Test getDoc incorrect ID
 Input:
-python getDoc.py ~/MSCI_720/documents id -1
+python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 id -1
 
 Output:
 Traceback (most recent call last):
@@ -193,7 +193,7 @@ KeyError: -1
 
 # Test getDoc incorrect docno
 Input:
-python getDoc.py ~/MSCI_720/documents docno LA010189-1101
+python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 docno LA010189-1101
 
 Output:
 Traceback (most recent call last):
@@ -201,4 +201,4 @@ Traceback (most recent call last):
     retrieve_by_docno(gzip_path, search_param)
   File "getDoc.py", line 35, in retrieve_by_docno
     with open(file_path, 'rb') as f:
-FileNotFoundError: [Errno 2] No such file or directory: '/Users/Tahmid Bari/MSCI_720/documents/89/01/01/1101.p'
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_720/720_Assignments/720_HW1/89/01/01/1101.p'
