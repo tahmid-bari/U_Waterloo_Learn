@@ -3,7 +3,7 @@
 File: indexEngine.py
 Author: Tahmid Bari
 Student ID: 20864394
-Date Last Modified: June 1, 2021
+Date Last Modified: May 31, 2021
 Python Version: 3.7
 Indexes documents from the LA Times dataset by DOCNO and custom ID. For University of Waterloo course MSCI 720
 """
