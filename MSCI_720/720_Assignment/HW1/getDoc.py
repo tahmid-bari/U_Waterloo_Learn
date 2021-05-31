@@ -3,7 +3,7 @@
 File: getDoc.py 
 Author: Tahmid Bari
 Student ID: 20864394
-Date Last Modified: June 1, 2021
+Date Last Modified: May 31, 2021
 Python Version: 3.7
 Retrieves documents from LA Times dataset given index and either DOCNO or internal ID. For University of Waterloo course MSCI 720.
 """
