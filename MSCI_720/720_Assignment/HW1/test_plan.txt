@@ -1,15 +1,12 @@
-# Test Empty arguments: 
+# Test Empty Arguments:
 
-Input:
-python indexEngine.py
+Input: python indexEngine.py
 
 Output:
 usage: indexEngine.py [-h] GZIP_FILE DOCUMENT_DIRECTORY
 indexEngine.py: error: the following arguments are required: GZIP_FILE, DOCUMENT_DIRECTORY
 
-
-Input:
-python getDoc.py
+Input: python getDoc.py
 
 Output:
 usage: getDoc.py [-h] DOCUMENT_DIRECTORY DOC_NO OR ID SEARCH_PARAMETER
@@ -17,22 +14,19 @@ getDoc.py: error: the following arguments are required: DOCUMENT_DIRECTORY, DOC_
 
 
 # Test indexEngine directory already exists:
-
-Input:
-python indexEngine.py ~/MSCI_720/720_Assignments/720_HW1/latimes.gz  ~/MSCI_720/720_Assignments/720_HW1
+Input: python indexEngine.py ~/MSCI_720/Documents/latimes.gz  ~/MSCI_720/Documents
 
 Output:
 Traceback (most recent call last):
-  File "indexEngine.py", line 39, in <module>
+  File "indexEngine.py", line 53, in <module>
     os.makedirs(directory_path, exist_ok=False)
-  File "/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_720/720_Assignments/720_HW1/venv/bin/../lib/python3.4/os.py", line 237, in makedirs
+  File "C:\Users\Tahmid Bari\AppData\Local\Programs\Python\Python37\lib\os.py", line 223, in makedirs
     mkdir(name, mode)
-FileExistsError: [Errno 17] File exists: '/Users/Tahmid Bari/Desktop/UWaterloo/Study/MSCI_720/720_Assignments/720_HW1'
+FileExistsError: [WinError 183] Cannot create a file when that file already exists: '~/MSCI_720/Documents'
+
 
 # Test indexEngine with no directory existing:
-
-Input:
-python indexEngine.py ~/MSCI_720/720_Assignments/720_HW1/latimes.gz  ~/MSCI_720/720_Assignments/720_HW1
+Input: python indexEngine.py ~/MSCI_720/Documents/latimes.gz  ~/MSCI_720/Documents
 
 Output:
 
@@ -51,9 +45,7 @@ Processed Document: 131896
 
 
 # Test getDoc by docno
-
-Input:
-python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 docno LA010189-0018
+Input: python getDoc.py ~/MSCI_720/Documents docno LA010189-0018
 
 Output:
 docno: LA010189-0018
@@ -117,14 +109,12 @@ Column
 </DOC>
 
 # Test getDoc by id
-Input:
-python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 id 18
+Input: python getDoc.py ~/MSCI_720/Documents id 76235
+
 docno: LA010189-0018
 internal id: 76235
-date: January 1, 1989
-headline: OUTTAKES: MATERIAL MOLL
-raw document:
-<DOC>
+date: January 1, 1989 headline: OUTTAKES: MATERIAL MOLL
+raw document: <DOC>
 <DOCNO> LA010189-0018 </DOCNO>
 <DOCID> 42 </DOCID>
 <DATE>
@@ -179,21 +169,20 @@ Column
 </TYPE>
 </DOC>
 
-# Test getDoc incorrect ID
-Input:
-python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 id -1
+# Test getDoc with incorrect id
+Input: python getDoc.py ~/MSCI_720/Documents id -100
 
 Output:
 Traceback (most recent call last):
-  File "getDoc.py", line 54, in <module>
+  File "getDoc.py", line 53, in <module>
     retrieve_by_id(gzip_path, search_param)
-  File "getDoc.py", line 45, in retrieve_by_id
-    docno = doc_id_no[int(param)]
-KeyError: -1
+  File "getDoc.py", line 42, in retrieve_by_id
+    with open(path + IDX_PATH, 'rb') as file:
+FileNotFoundError: [Errno 2] No such file or directory: '~/MSCI_720/Documents/doc_id_no.p'
 
-# Test getDoc incorrect docno
-Input:
-python getDoc.py ~/MSCI_720/720_Assignments/720_HW1 docno LA010189-1101
+
+# Test getDoc with incorrect docno
+Input: python getDoc.py ~/MSCI_720/Documents docno LA010189-0000
 
 Output:
 Traceback (most recent call last):
@@ -201,4 +190,4 @@ Traceback (most recent call last):
     retrieve_by_docno(gzip_path, search_param)
   File "getDoc.py", line 34, in retrieve_by_docno
     with open(file_path, 'rb') as f:
-FileNotFoundError: [Errno 2] No such file or directory: '~/MSCI_720/720_Assignments\\720_HW1/89/01/01/1101.p'
+FileNotFoundError: [Errno 2] No such file or directory: '~/MSCI_720/Documents/89/01/01/0000.p'
